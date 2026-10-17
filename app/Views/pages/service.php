@@ -6,7 +6,7 @@
   </div>
   <aside class="aside">
     <h2>What's included</h2>
-    <ul class="checklist">
+    <ul class="checklist mt-4">
       <?php foreach ($service['features'] as $f): ?>
         <li><?= icon('check', 16) ?> <?= e($f) ?></li>
       <?php endforeach; ?>

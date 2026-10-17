@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
   user_id CHAR(36) NOT NULL,
   type ENUM('reset','verify') NOT NULL,
   token_hash CHAR(64) NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
+  expires_at DATETIME NOT NULL,
   used_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_auth_tokens_hash (token_hash),

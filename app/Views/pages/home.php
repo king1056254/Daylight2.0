@@ -27,7 +27,7 @@ $stats = [['40+', 'Systems shipped'], ['12', 'Industries served'], ['3', 'SaaS p
       <a href="<?= e(url('/services/' . $s['slug'])) ?>" class="card card-link card-hover-border">
         <h3 class="title-lg"><?= e($s['title']) ?></h3>
         <p class="body"><?= e($s['summary']) ?></p>
-        <span class="more">Learn more <?= icon('arrow-right', 14) ?></span>
+        <span class="more mt-4">Learn more <?= icon('arrow-right', 14) ?></span>
       </a>
     <?php endforeach; ?>
   </div>
@@ -60,7 +60,7 @@ $stats = [['40+', 'Systems shipped'], ['12', 'Industries served'], ['3', 'SaaS p
         <?= status_pill((string) $p['status']) ?>
         <h3 class="title-lg mt-4"><?= e($p['name']) ?></h3>
         <p class="body"><?= e($p['tagline']) ?></p>
-        <ul class="checklist">
+        <ul class="checklist mt-4">
           <?php foreach (array_slice($p['features'], 0, 3) as $f): ?>
             <li><?= icon('check', 16) ?> <?= e($f) ?></li>
           <?php endforeach; ?>

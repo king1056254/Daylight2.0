@@ -43,9 +43,9 @@ final class PageController extends Controller
             return self::notFoundItem('Service not found', '/services', 'Back to services', 'Service — Daylight');
         }
         return self::page('pages/service', ['service' => $row], [
-            'title' => (string) $row['title'] . ' — Daylight',
-            'description' => (string) ($row['summary'] ?? 'How Daylight delivers this service for clients in Kenya.'),
-            'og_title' => (string) $row['title'] . ' — Daylight',
+            'title' => 'Service — Daylight',
+            'description' => 'How Daylight delivers this service for clients in Kenya.',
+            'og_title' => 'Service — Daylight',
             'og_description' => 'How Daylight delivers this service.',
         ]);
     }
@@ -68,9 +68,9 @@ final class PageController extends Controller
             return self::notFoundItem('Case study not found', '/work', 'Back to our work', 'Case study — Daylight');
         }
         return self::page('pages/work_detail', ['project' => $row], [
-            'title' => (string) $row['title'] . ' — Daylight case study',
-            'description' => (string) ($row['summary'] ?? 'The problem, the solution and the outcome of a Daylight project.'),
-            'og_title' => (string) $row['title'] . ' — Daylight',
+            'title' => 'Case study — Daylight',
+            'description' => 'The problem, the solution and the outcome of a Daylight project.',
+            'og_title' => 'Case study — Daylight',
             'og_description' => 'Problem, solution and outcome of a Daylight project.',
         ]);
     }
@@ -137,9 +137,9 @@ final class PageController extends Controller
             return self::notFoundItem('Article not found', '/blog', 'Back to insights', 'Article — Daylight Insights');
         }
         return self::page('pages/blog_post', ['post' => $row], [
-            'title' => (string) $row['title'] . ' — Daylight Insights',
-            'description' => (string) ($row['excerpt'] ?? 'An article from the Daylight team on building business software.'),
-            'og_title' => (string) $row['title'] . ' — Daylight Insights',
+            'title' => 'Article — Daylight Insights',
+            'description' => 'An article from the Daylight team on building business software.',
+            'og_title' => 'Article — Daylight Insights',
             'og_description' => 'An article from the Daylight team.',
         ]);
     }

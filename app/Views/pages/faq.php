@@ -3,7 +3,7 @@
 <section class="section section-3xl">
   <div class="accordion">
     <?php foreach ($faqs as $f): ?>
-      <details>
+      <details name="faq">
         <summary><span><?= e($f['question']) ?></span><?= icon('chevron-down', 16) ?></summary>
         <div class="answer"><?= e($f['answer']) ?></div>
       </details>

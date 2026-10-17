@@ -1,0 +1,15 @@
+<?php
+// Copy to config.local.php (never commit it) if your host cannot create a ".env" file.
+// Same keys as .env.example. Real environment variables still win over this file.
+return [
+    'APP_ENV' => 'production',
+    'APP_DEBUG' => 'false',
+    'APP_URL' => 'https://your-domain.example',
+    'APP_KEY' => '',
+    'DB_HOST' => 'localhost',
+    'DB_NAME' => '',
+    'DB_USER' => '',
+    'DB_PASS' => '',
+    'MAIL_ENABLED' => 'false',
+    'SETUP_TOKEN' => '',
+];

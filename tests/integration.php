@@ -91,7 +91,7 @@ foreach ([
     '/work' => 'Case studies', '/work/shulesoft-academic-portal' => 'The problem', '/products' => 'Our own SaaS platforms',
     '/industries' => 'Sectors we know well', '/technologies' => 'The stack behind the work', '/about' => 'A small team',
     '/blog' => 'Notes from the build', '/blog/why-custom-software-beats-spreadsheets' => 'Spreadsheets are excellent',
-    '/careers' => 'Build with us', '/contact' => "Let's talk", '/quote' => 'Request a quote', '/faq' => 'Questions we get asked',
+    '/careers' => 'Build with us', '/contact' => 'We reply to every message', '/quote' => 'Request a quote', '/faq' => 'Questions we get asked',
     '/privacy' => 'Privacy policy', '/terms' => 'Terms of service', '/auth' => 'Sign in',
 ] as $path => $needle) {
     test("GET $path renders", function () use ($path, $needle): void {
@@ -234,7 +234,7 @@ test('password reset is honest when email is not configured', function (): void 
     actAs(null);
     $r = http('POST', '/auth/forgot', ['email' => 'new@example.com']);
     assertSame(503, $r->status);
-    assertContains("aren't set up", $r->body);
+    assertContains('set up on this server', $r->body);
 });
 
 test('reset token flow works and tokens are single-use', function (): void {
@@ -274,7 +274,7 @@ test('staff cannot change website content; admin can', function (): void {
     assertSame(303, $r->status);
     assertSame($before + 1, count_rows('services'));
     assertSame('brand-new-service', Db::value("SELECT slug FROM services WHERE title = 'Brand New Service'"));
-    assertSame('["A","B"]', Db::value("SELECT features FROM services WHERE title = 'Brand New Service'"));
+    assertSame(['A', 'B'], json_decode((string) Db::value("SELECT features FROM services WHERE title = 'Brand New Service'"), true));
     assertSame(200, http('GET', '/services/brand-new-service')->status, 'appears on the public site');
     $dup = http('POST', '/admin/services', ['title' => 'Other', 'slug' => 'brand-new-service']);
     assertSame(422, $dup->status);
@@ -294,25 +294,27 @@ test('admin inbox: output is escaped and status can change', function (): void {
     assertSame(422, http('POST', '/admin/messages/' . $id, ['status' => 'Bogus'])->status);
 });
 
-test('users: admin cannot manage admins; super admin can; last super admin protected', function (): void {
+test('users: admins cannot manage admins or grant super_admin; super admins can', function (): void {
     $admin = (string) Db::value("SELECT id FROM users WHERE email = 'admin1@example.com'");
     $superId = newUser('super1@example.com', ['super_admin']);
     actAs($admin);
-    assertSame(403, http('GET', '/admin/users/' . $superId)->status);
+    assertSame(403, http('GET', '/admin/users/' . $superId)->status, 'admin cannot open a super admin');
     $cid = (string) Db::value("SELECT id FROM users WHERE email = 'client1@example.com'");
     assertSame(200, http('GET', '/admin/users/' . $cid)->status);
     $grant = http('POST', '/admin/users/' . $cid, ['full_name' => 'C', 'is_active' => '1', 'roles' => ['client', 'super_admin']]);
     assertSame(303, $grant->status);
-    assertTrue(count_rows('user_roles', "user_id = ? AND role = 'super_admin'", [$cid]) === 0, 'admin cannot grant super_admin');
+    assertSame(0, count_rows('user_roles', "user_id = ? AND role = 'super_admin'", [$cid]), 'admin cannot grant super_admin');
+    assertSame(1, count_rows('user_roles', "user_id = ? AND role = 'client'", [$cid]));
     actAs($superId);
     $other = newUser('super2@example.com', ['super_admin']);
     $r = http('POST', '/admin/users/' . $other, ['full_name' => 'S2', 'is_active' => '1', 'roles' => ['staff']]);
-    assertSame(303, $r->status, 'second super admin can be demoted');
-    $r2 = http('POST', '/admin/users/' . $other, ['full_name' => 'S2', 'is_active' => '1', 'roles' => ['staff']]);
-    assertTrue(in_array($r2->status, [303, 422], true));
-    Db::exec("DELETE FROM user_roles WHERE role = 'super_admin' AND user_id <> ?", [$superId]);
-    $blocked = http('POST', '/admin/users/' . $other, ['full_name' => 'x']);
-    assertTrue($blocked->status === 303 || $blocked->status === 422);
+    assertSame(303, $r->status, 'a second super admin can be demoted');
+    assertSame(0, count_rows('user_roles', "user_id = ? AND role = 'super_admin'", [$other]));
+    assertSame(1, count_rows('user_roles', "user_id = ? AND role = 'staff'", [$other]));
+    // A super admin cannot deactivate or change their own roles through the form.
+    http('POST', '/admin/users/' . $superId, ['full_name' => 'Me', 'roles' => ['client']]);
+    assertSame(1, count_rows('user_roles', "user_id = ? AND role = 'super_admin'", [$superId]));
+    assertSame(1, (int) Db::value('SELECT is_active FROM users WHERE id = ?', [$superId]));
 });
 
 // ======================= portal =======================

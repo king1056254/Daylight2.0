@@ -15,6 +15,18 @@ final class Config
         if (is_file($file) && is_readable($file)) {
             self::$values = array_merge(self::$values, self::parse((string) file_get_contents($file)));
         }
+        // Fallback for hosts whose file manager cannot create dotfiles: config.local.php returning ['KEY' => 'value'].
+        $php = $root . '/config.local.php';
+        if (is_file($php) && is_readable($php)) {
+            $arr = require $php;
+            if (is_array($arr)) {
+                foreach ($arr as $k => $v) {
+                    if (is_string($k) && preg_match('/^[A-Z][A-Z0-9_]*$/', $k) === 1 && (is_string($v) || is_int($v) || is_bool($v))) {
+                        self::$values[$k] = is_bool($v) ? ($v ? 'true' : 'false') : (string) $v;
+                    }
+                }
+            }
+        }
     }
 
     /** @return array<string,string> */

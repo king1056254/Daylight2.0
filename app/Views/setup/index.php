@@ -7,7 +7,7 @@
 
   <div class="card mt-6">
     <h2 class="title-lg font-display font-semibold">Status</h2>
-    <ul class="checklist checklist-tight">
+    <ul class="checklist checklist-tight mt-4">
       <li><?= $s['db'] ? icon('check', 16) : icon('x', 16) ?> Database connection: <?= $s['db'] ? 'OK' : 'cannot connect — check DB_HOST, DB_NAME, DB_USER, DB_PASS' ?></li>
       <li><?= $s['migrated'] ? icon('check', 16) : icon('x', 16) ?> Tables created: <?= $s['migrated'] ? 'yes' : 'not yet' ?></li>
       <li><?= $s['content'] ? icon('check', 16) : icon('x', 16) ?> Original site content loaded: <?= $s['content'] ? 'yes' : 'not yet' ?></li>

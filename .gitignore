@@ -8,3 +8,4 @@ storage/sessions/*
 vendor/
 node_modules/
 *.zip
+/config.local.php
