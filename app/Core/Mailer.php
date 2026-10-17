@@ -53,6 +53,16 @@ final class Mailer
         }
     }
 
+    /** Absolute URL for emails. APP_URL must be the origin only (https://host). Returns null when it is not configured (never trusts the Host header). */
+    public static function absoluteUrl(string $path): ?string
+    {
+        $base = rtrim(Config::get('APP_URL', '') ?? '', '/');
+        if ($base === '' || preg_match('#^https?://[A-Za-z0-9.\-:]+$#', $base) !== 1) {
+            return null;
+        }
+        return $base . url($path);
+    }
+
     public static function cleanHeader(string $s): string
     {
         return trim((string) preg_replace('/[\r\n\0]+/', ' ', $s));

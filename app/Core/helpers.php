@@ -61,9 +61,11 @@ function icon(string $name, int $size = 16, string $class = ''): string
 
 function status_pill(string $status): string
 {
-    if (in_array($status, ['Live', 'Paid', 'Completed'], true)) {
+    if (in_array($status, ['Live', 'Paid', 'Completed', 'Resolved', 'Hired', 'Replied'], true)) {
         $tone = 'pill-success';
-    } elseif (in_array($status, ['Coming Soon', 'Draft', 'Pending'], true)) {
+    } elseif (in_array($status, ['Overdue', 'Cancelled', 'Rejected'], true)) {
+        $tone = 'pill-danger';
+    } elseif (in_array($status, ['Coming Soon', 'Draft', 'Pending', 'Closed', 'Inactive'], true)) {
         $tone = 'pill-muted';
     } else {
         $tone = 'pill-primary';
@@ -96,4 +98,9 @@ function as_list(mixed $value): array
     }
     $d = json_decode($value, true);
     return is_array($d) ? array_values(array_map('strval', $d)) : [];
+}
+
+function current_path(): string
+{
+    return (string) ($GLOBALS['__daylight_path'] ?? '/');
 }
