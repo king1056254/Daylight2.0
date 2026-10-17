@@ -1,0 +1,10 @@
+.env
+.env.local
+config.local.php
+storage/logs/*
+storage/sessions/*
+!storage/logs/.gitkeep
+!storage/sessions/.gitkeep
+vendor/
+node_modules/
+*.zip
