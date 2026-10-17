@@ -37,10 +37,10 @@ final class Session
 
     public static function destroy(): void
     {
+        $_SESSION = [];
         if (session_status() !== PHP_SESSION_ACTIVE) {
             return;
         }
-        $_SESSION = [];
         $p = session_get_cookie_params();
         if (!headers_sent()) {
             setcookie(session_name(), '', [
