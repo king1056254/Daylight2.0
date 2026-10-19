@@ -15,7 +15,11 @@ abstract class Controller
     /** @param array<string,mixed> $data @param array<string,string> $meta */
     protected static function page(string $view, array $data = [], array $meta = [], int $status = 200): Response
     {
-        return Response::html(View::render($view, $data + ['meta' => $meta]), $status);
+        $response = Response::html(View::render($view, $data + ['meta' => $meta]), $status);
+        if (str_starts_with($view, 'auth/') || str_starts_with($view, 'setup/')) {
+            $response->headers['Cache-Control'] = 'no-store';
+        }
+        return $response;
     }
 
     protected static function notFoundItem(string $heading, string $backUrl, string $backLabel, string $title): Response
@@ -100,7 +104,9 @@ abstract class Controller
             'pageTitle' => $title,
             'notice' => is_array($notice) ? $notice : null,
         ], null);
-        return Response::html($html, $status);
+        $response = Response::html($html, $status);
+        $response->headers['Cache-Control'] = 'no-store';
+        return $response;
     }
 
     /** @return list<array{0:string,1:list<array{0:string,1:string}>}> */

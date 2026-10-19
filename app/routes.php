@@ -7,6 +7,7 @@ use App\Controllers\CrudController;
 use App\Controllers\FormController;
 use App\Controllers\PageController;
 use App\Controllers\PortalController;
+use App\Controllers\SeoController;
 use App\Controllers\SetupController;
 use App\Controllers\UsersController;
 use App\Core\Router;
@@ -31,6 +32,10 @@ $router->get('/quote', [PageController::class, 'quote']);
 $router->get('/faq', [PageController::class, 'faq']);
 $router->get('/privacy', [PageController::class, 'privacy']);
 $router->get('/terms', [PageController::class, 'terms']);
+
+// ---- Search engines ----
+$router->get('/sitemap\.xml', [SeoController::class, 'sitemap']);
+$router->get('/robots\.txt', [SeoController::class, 'robots']);
 
 // ---- Public forms ----
 $router->post('/contact', [FormController::class, 'contact']);

@@ -1,10 +1,11 @@
-<?php /** @var array<string,mixed> $s @var string $msg @var string $err @var array<string,string> $old */ ?>
+<?php /** @var array<string,mixed>|null $s @var string $msg @var string $err @var array<string,string> $old */ ?>
 <section class="section section-3xl">
   <h1 class="text-3xl font-semibold">Daylight setup</h1>
   <p class="mt-3 muted text-sm">One-time installer for hosts without SSH. After finishing, delete <code>SETUP_TOKEN</code> from your configuration so this page turns off.</p>
   <?php if ($msg !== ''): ?><div class="alert alert-success mt-6" role="status"><?= e($msg) ?></div><?php endif; ?>
   <?php if ($err !== ''): ?><div class="alert alert-error mt-6" role="alert"><?= e($err) ?></div><?php endif; ?>
 
+  <?php if ($s !== null): ?>
   <div class="card mt-6">
     <h2 class="title-lg font-display font-semibold">Status</h2>
     <ul class="checklist checklist-tight mt-4">
@@ -14,6 +15,9 @@
       <li><?= $s['admin'] ? icon('check', 16) : icon('x', 16) ?> Administrator exists: <?= $s['admin'] ? 'yes' : 'not yet' ?></li>
     </ul>
   </div>
+  <?php else: ?>
+  <p class="mt-6 text-sm muted">Enter the setup token in a form below to run a step. Status details appear after a correct token.</p>
+  <?php endif; ?>
 
   <form method="post" action="<?= e(url('/setup')) ?>" class="form-card stack mt-6">
     <?= csrf_field() ?><input type="hidden" name="action" value="migrate">

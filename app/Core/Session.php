@@ -13,7 +13,15 @@ final class Session
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
         ini_set('session.cookie_httponly', '1');
-        $path = Config::get('SESSION_PATH', ROOT . '/storage/sessions') ?? '';
+        $path = Config::get('SESSION_PATH', '') ?? '';
+        if ($path === '') {
+            // Prefer the host's own session folder (never inside the web root); fall back to storage/sessions only if it is unusable.
+            $configured = (string) ini_get('session.save_path');
+            $dir = $configured !== '' ? (string) preg_replace('/^\d+;(?:\d+;)?/', '', $configured) : sys_get_temp_dir();
+            if (!is_dir($dir) || !is_writable($dir)) {
+                $path = ROOT . '/storage/sessions';
+            }
+        }
         if ($path !== '' && is_dir($path) && is_writable($path)) {
             session_save_path($path);
         }

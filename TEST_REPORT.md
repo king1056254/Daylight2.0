@@ -1,8 +1,10 @@
 # TEST_REPORT.md
 
 ## Summary
-**No PHP code has been executed. No test of the application has run. Nothing is Verified.**
-The environment used so far has no PHP, no MySQL, no browser and no network. What follows is exactly what *was* run, and what was not.
+**No PHP code has been executed. No test of the PHP application has run. Nothing is Verified.**
+The build environment has no PHP and no MySQL. It does have a browser engine, so the stylesheet and the JavaScript *were* tested in Chromium against an approximate rendering of the real templates with sample data (rows 10–12). What follows is exactly what was run, and what was not.
+
+**Is everything OK, with no errors? Unknown — and unlikely.** Code that has never been executed almost certainly contains some mistakes. The checks below make the most common ones unlikely, but only `php -l` and the test suites on a real PHP server can show it.
 
 ## Checks that actually ran (all in the build environment)
 | # | Check | Result | What it proves — and does not |
@@ -14,10 +16,15 @@ The environment used so far has no PHP, no MySQL, no browser and no network. Wha
 | 5 | Seed SQL (`database/seeds/content.sql`) executed against an in-memory **SQLite stand-in** built from the schema column lists | Parsed; row counts 1 settings, 8 services, 7 industries, 19 technologies, 4 case studies, 3 products, 3 posts, 2 team, 3 testimonials, 5 FAQs, 3 jobs (match the original seed); all JSON arrays valid | Quoting/arity are right. Not MySQL; `UUID()`/`NOW()` were stubbed. |
 | 6 | Grep of all templates for inline `style="` and inline `<script>` (the CSP forbids both) | none | Pages should not be blocked by the CSP. Unconfirmed in a browser. |
 | 7 | Manual comparison of ported page copy and page titles/descriptions with the source for privacy, terms, services, work, blog, products, industries, technologies, FAQ, home, about, contact, quote, careers, auth | Differences found and fixed (static titles on detail pages, spacing classes) | Human reading, not automated. |
+| 8 | `python3 tools/lint_deep.py` — lines that probably lack a `;`, and every variable a view uses is passed by each controller call | clean (69 call sites; one array built in a variable checked by hand). Fault-injected copy: 3 of 3 injected faults reported | Catches missing variables and terminators. Still not a parser. |
+| 9 | `python3 tools/security_audit.py` — unescaped output, dangerous functions, raw superglobals, dynamic SQL, CSRF on all 17 POST routes, guard on every admin/portal/setup route, unchecked links, unsafe browser JS | **1 real finding** (product link scheme) fixed; the rest were false positives, fixed in the script; 11 dynamic-SQL spots reviewed by hand (trusted identifiers/placeholders only). Fault-injected copy: 4 of 4 real vulnerabilities reported | Static review only; see SECURITY_REVIEW.md. |
+| 10 | Browser render check: 18 page types × 3 widths (375/768/1280) × light/dark = 108 renders of the real template markup with sample data, real `app.css` | no horizontal scrolling, no console errors. **1 real CSS bug found and fixed** (mobile sidebar/admin stretched by a full-height grid). Screenshots of home (light+dark), contact (mobile), portal dashboard, admin form (mobile) were looked at | Tests CSS only: fallback fonts (Google Fonts unreachable), sample text, and the original site is **not** compared. |
+| 11 | Browser interaction checks with the real `app.js`: mobile menu open/close/auto-close, desktop nav, theme toggle + storage, careers apply toggle, FAQ exclusive accordion, double-submit protection, honeypot hidden, admin sidebar, delete confirmation | 25 of 25 passed | Behaviour of the JS, not of the PHP. |
+| 12 | `theme-init.js` in isolation: stored choice beats OS setting, OS light/dark default, junk value ignored | 5 of 5 passed | |
 
 ## Tests written but NOT run
 - `tests/unit.php` — 21 tests (config parsing, validator, router, migration splitter, helpers, mailer header safety, CSRF, redirect safety, proxy-IP handling, admin resource definitions).
-- `tests/integration.php` — 23 scenario tests + 18 generated page tests, driving the real router against a scratch MySQL database: public pages, 404s, unpublished content, forms (valid/invalid/CSRF/honeypot/rate-limit), auth (register/login/logout/reset/rate limit), authorisation (anonymous/client/staff/admin/super admin), XSS escaping, portal isolation between clients, invoice totals and payment settlement, demo-data load/remove.
+- `tests/integration.php` — 34 scenario tests + 18 generated page tests, driving the real router against a scratch MySQL database: public pages, 404s, unpublished content, forms (valid/invalid/CSRF/honeypot/rate-limit), auth (register/login/logout/reset/rate limit), authorisation (anonymous/client/staff/admin/super admin), XSS escaping, portal isolation between clients, invoice totals and payment settlement, demo-data load/remove, **sitemap.xml and robots.txt**, and **attack simulations** (bad CSRF on every POST route, SQL-injection strings, stored XSS, mass assignment, header injection, setup page without token, no-store headers, deactivated accounts, access-control sweep over every admin screen).
 While reading the tests back, wrong expectations were found and corrected by inspection (escaped apostrophes, MySQL JSON re-formatting). Others may remain.
 
 ## Not verified at all

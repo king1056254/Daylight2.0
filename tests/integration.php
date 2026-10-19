@@ -396,4 +396,182 @@ test('setup page is disabled without SETUP_TOKEN', function (): void {
     assertSame(404, http('GET', '/setup')->status);
 });
 
+// ======================= sitemap and robots =======================
+test('sitemap.xml needs APP_URL, then lists only public, published pages', function (): void {
+    actAs(null);
+    putenv('APP_URL=');
+    assertSame(503, http('GET', '/sitemap.xml')->status);
+    putenv('APP_URL=https://example.com');
+    $r = http('GET', '/sitemap.xml');
+    assertSame(200, $r->status);
+    assertContains('application/xml', $r->headers['Content-Type']);
+    foreach (['/', '/services', '/work', '/blog', '/faq', '/services/custom-business-software', '/work/shulesoft-academic-portal', '/blog/why-custom-software-beats-spreadsheets'] as $path) {
+        assertContains('<loc>https://example.com' . $path . '</loc>', $r->body, $path);
+    }
+    foreach (['/admin', '/portal', '/auth', '/setup'] as $private) {
+        assertNotContains('https://example.com' . $private, $r->body, 'private area leaked into the sitemap');
+    }
+    if (function_exists('simplexml_load_string')) {
+        assertTrue(simplexml_load_string($r->body) !== false, 'sitemap is well-formed XML');
+    }
+    Db::exec("UPDATE services SET published = 0 WHERE slug = 'e-commerce'");
+    assertNotContains('/services/e-commerce', http('GET', '/sitemap.xml')->body, 'unpublished page excluded');
+    Db::exec("UPDATE services SET published = 1 WHERE slug = 'e-commerce'");
+    putenv('APP_URL=');
+});
+
+test('robots.txt hides private areas and points to the sitemap', function (): void {
+    actAs(null);
+    putenv('APP_URL=https://example.com');
+    $r = http('GET', '/robots.txt');
+    assertSame(200, $r->status);
+    foreach (['Disallow: /admin', 'Disallow: /portal', 'Disallow: /auth', 'Disallow: /setup', 'Sitemap: https://example.com/sitemap.xml'] as $line) {
+        assertContains($line, $r->body);
+    }
+    putenv('APP_URL=');
+    assertNotContains('Sitemap:', http('GET', '/robots.txt')->body, 'no sitemap line without APP_URL');
+});
+
+// ======================= security: attack simulations =======================
+function ensureUser(string $email, array $roles = []): string
+{
+    $id = Db::value('SELECT id FROM users WHERE email = ?', [$email]);
+    return $id !== null ? (string) $id : newUser($email, $roles);
+}
+
+test('security: every POST route rejects a bad CSRF token and changes nothing', function (): void {
+    preg_match_all("/\\\$router->post\\('([^']+)'/", (string) file_get_contents(ROOT . '/app/routes.php'), $m);
+    assertTrue(count($m[1]) >= 17, 'found the POST routes');
+    actAs(ensureUser('admin1@example.com', ['admin']));
+    $count = static fn (): array => [count_rows('services'), count_rows('users'), count_rows('contact_messages'), count_rows('quote_requests'), count_rows('support_tickets'), count_rows('user_roles')];
+    $before = $count();
+    foreach ($m[1] as $path) {
+        $path = str_replace(['{resource}', '{id}', '{token}', '{slug}'], ['services', Db::uuid(), str_repeat('a', 64), 'x'], $path);
+        $r = http('POST', $path, ['_csrf' => 'invalid', 'title' => 'Evil', 'email' => 'evil@example.com', 'name' => 'Evil', 'password' => 'Password123', 'subject' => 'Evil', 'message' => 'Evil', 'action' => 'migrate']);
+        assertTrue(in_array($r->status, [303, 400, 403, 404, 419, 429], true), "$path returned {$r->status}");
+        if ($path === '/auth/logout') {
+            assertTrue(Auth::check(), 'logout needs a valid CSRF token');
+        }
+    }
+    assertSame($before, $count(), 'a forged request changed data');
+});
+
+test('security: SQL injection strings are treated as plain data', function (): void {
+    $payloads = ["' OR '1'='1", "'; DROP TABLE users; --", '" OR ""="', "1' UNION SELECT password_hash FROM users --"];
+    actAs(null);
+    foreach ($payloads as $p) {
+        assertSame(401, http('POST', '/auth/login', ['email' => $p, 'password' => $p])->status, 'login');
+        assertSame(404, http('GET', '/blog/' . $p)->status, 'slug');
+    }
+    actAs(ensureUser('admin1@example.com', ['admin']));
+    foreach ($payloads as $p) {
+        assertSame(200, http('GET', '/admin/messages', [], ['q' => $p])->status, 'admin search');
+        assertSame(200, http('GET', '/admin/users', [], ['q' => $p])->status, 'user search');
+    }
+    assertTrue(count_rows('users') > 0, 'the users table still exists');
+    assertContains('Nothing matches your search.', http('GET', '/admin/messages', [], ['q' => '%'])->body, 'LIKE wildcards are escaped');
+});
+
+test('security: stored XSS is escaped where it is displayed', function (): void {
+    $payload = '"><script>alert(1)</script><img src=x onerror=alert(2)>';
+    actAs(null);
+    http('POST', '/quote', ['name' => 'Mal', 'email' => 'mal@example.com', 'project_type' => 'Website', 'details' => $payload]);
+    actAs(ensureUser('admin1@example.com', ['admin']));
+    $id = (string) Db::value("SELECT id FROM quote_requests WHERE email = 'mal@example.com'");
+    $page = http('GET', '/admin/quotes/' . $id)->body;
+    assertNotContains('<script>alert(1)</script>', $page);
+    assertNotContains('<img src=x', $page);
+    assertContains('&lt;script&gt;', $page);
+    // client portal message thread
+    $u = ensureUser('clienta@example.com', ['client']);
+    $cid = Db::value('SELECT id FROM clients WHERE user_id = ?', [$u]) ?? Db::insert('clients', ['user_id' => $u, 'company_name' => 'A Ltd']);
+    $pid = Db::value('SELECT id FROM client_projects WHERE client_id = ? LIMIT 1', [$cid]) ?? Db::insert('client_projects', ['client_id' => $cid, 'name' => 'Project A']);
+    actAs($u);
+    assertSame(303, http('POST', '/portal/projects/' . $pid . '/messages', ['body' => $payload])->status);
+    $thread = http('GET', '/portal/projects/' . $pid)->body;
+    assertNotContains('<script>alert(1)</script>', $thread);
+    assertContains('&lt;script&gt;', $thread);
+});
+
+test('security: mass assignment and parameter tampering are ignored', function (): void {
+    $u = ensureUser('clienta@example.com', ['client']);
+    $own = (string) Db::value('SELECT id FROM clients WHERE user_id = ? LIMIT 1', [$u]);
+    $other = (string) (Db::value("SELECT id FROM clients WHERE company_name = 'B Ltd'") ?? Db::insert('clients', ['company_name' => 'B Ltd']));
+    actAs($u);
+    http('POST', '/portal/tickets', ['subject' => 'Tamper', 'priority' => 'Low', 'status' => 'Closed', 'client_id' => $other, 'id' => Db::uuid()]);
+    assertSame('Open', Db::value("SELECT status FROM support_tickets WHERE subject = 'Tamper'"), 'status cannot be set by the client');
+    assertSame($own, Db::value("SELECT client_id FROM support_tickets WHERE subject = 'Tamper'"), 'client_id cannot be set by the client');
+    actAs(null);
+    http('POST', '/auth/register', ['name' => 'Mallory', 'email' => 'mallory@example.com', 'password' => 'Password123', 'roles' => ['super_admin'], 'is_admin' => '1', 'role' => 'admin']);
+    assertSame(0, count_rows('user_roles', "user_id = (SELECT id FROM users WHERE email = 'mallory@example.com')"), 'registration cannot assign roles');
+    actAs(null);
+});
+
+test('security: email header injection is neutralised', function (): void {
+    actAs(null);
+    http('POST', '/contact', ['name' => 'Eve', 'email' => 'eve@example.com', 'subject' => "Hi\r\nBcc: attacker@example.com", 'message' => 'x']);
+    $subject = (string) Db::value("SELECT subject FROM contact_messages WHERE email = 'eve@example.com'");
+    assertTrue(!str_contains($subject, "\n") && !str_contains($subject, "\r"), 'stored subject has no line breaks');
+    $mail = Db::one('SELECT subject FROM email_outbox ORDER BY id DESC LIMIT 1');
+    assertTrue(!str_contains((string) $mail['subject'], "\n") && !str_contains((string) $mail['subject'], "\r"), 'outbox subject has no line breaks');
+    assertSame(422, http('POST', '/contact', ['name' => 'Eve', 'email' => "eve@example.com\r\nBcc: x@y.z", 'message' => 'x'])->status);
+});
+
+test('security: the setup page reveals nothing without the token', function (): void {
+    putenv('SETUP_TOKEN=' . str_repeat('s', 32));
+    actAs(null);
+    $page = http('GET', '/setup');
+    assertSame(200, $page->status);
+    assertNotContains('Database connection', $page->body);
+    assertNotContains('Administrator exists', $page->body);
+    $bad = http('POST', '/setup', ['action' => 'migrate', 'token' => 'wrong']);
+    assertSame(403, $bad->status);
+    assertNotContains('Administrator exists', $bad->body);
+    putenv('SETUP_TOKEN=' . str_repeat('s', 8));
+    assertSame(404, http('GET', '/setup')->status, 'a short token does not enable setup');
+    putenv('SETUP_TOKEN=');
+});
+
+test('security: private pages are marked no-store', function (): void {
+    actAs(ensureUser('clienta@example.com', ['client']));
+    assertSame('no-store', http('GET', '/portal')->headers['Cache-Control'] ?? '');
+    actAs(ensureUser('admin1@example.com', ['admin']));
+    assertSame('no-store', http('GET', '/admin')->headers['Cache-Control'] ?? '');
+    actAs(null);
+    assertSame('no-store', http('GET', '/auth')->headers['Cache-Control'] ?? '');
+});
+
+test('security: deactivated accounts lose access immediately', function (): void {
+    $id = newUser('gone@example.com', ['staff']);
+    actAs($id);
+    assertSame(200, http('GET', '/admin')->status);
+    Db::exec('UPDATE users SET is_active = 0 WHERE id = ?', [$id]);
+    Auth::loginAs($id); // same browser session, cache cleared
+    assertSame(303, http('GET', '/admin')->status, 'existing session no longer works');
+    assertTrue(Auth::attempt('gone@example.com', 'Password123') === null, 'cannot sign in again');
+    actAs(null);
+});
+
+test('security: access-control sweep over every admin screen', function (): void {
+    $staff = ensureUser('staff1@example.com', ['staff']);
+    $client = ensureUser('client1@example.com', ['client']);
+    foreach (\App\Admin\Resources::all() as $slug => $def) {
+        foreach (['', '/new'] as $suffix) {
+            $path = '/admin/' . $slug . $suffix;
+            actAs(null);
+            assertSame(303, http('GET', $path)->status, "$path anonymous");
+            actAs($client);
+            assertSame(403, http('GET', $path)->status, "$path client");
+            actAs($staff);
+            $allowed = $def['visible'] === 'staff' && ($suffix === '' || ($def['write'] === 'staff' && empty($def['no_create'])));
+            assertSame($allowed ? 200 : 403, http('GET', $path)->status, "$path staff");
+        }
+    }
+    foreach (['/admin/users', '/admin/users/new'] as $path) {
+        actAs($staff);
+        assertSame(403, http('GET', $path)->status, "$path staff");
+    }
+    actAs(null);
+});
+
 exit(runTests('integration'));

@@ -11,7 +11,7 @@
         <ul class="checklist checklist-tight mt-5">
           <?php foreach ($p['features'] as $f): ?><li><?= icon('check', 16) ?> <?= e($f) ?></li><?php endforeach; ?>
         </ul>
-        <?php if (!empty($p['product_url'])): ?>
+        <?php if (!empty($p['product_url']) && preg_match('#^https?://#i', (string) $p['product_url']) === 1): ?>
           <a href="<?= e($p['product_url']) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-block mt-6">Visit product</a>
         <?php endif; ?>
       </article>

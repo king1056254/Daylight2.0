@@ -43,7 +43,12 @@ Everything below needs a computer (or a cloud PHP environment). **Nothing here h
 - [ ] Test password reset and (optionally) `REQUIRE_EMAIL_VERIFICATION=true` end to end.
 - [ ] Test wrong credentials/blocked port → `email_outbox` shows `failed` and the form still saves.
 
-## 7. Security checks
+## 7. Security checks (see SECURITY_REVIEW.md)
+- [ ] `python3 tools/security_audit.py` is clean on the code you actually deploy.
+- [ ] `php tests/integration.php` passes, including the "security:" tests (CSRF on every POST, SQL-injection strings, stored XSS, mass assignment, access-control sweep, setup page, no-store).
+- [ ] Run OWASP ZAP baseline (or similar) against the local site; try `sqlmap` on the login, contact, quote forms and admin search (local test database only).
+- [ ] Try to reach another client's project/invoice by changing the id in the URL while signed in as a different client (must 404).
+- [ ] Open `/sitemap.xml` and `/robots.txt` (set `APP_URL` first); check private areas are absent/disallowed.
 - [ ] Try a `<script>` payload in every form field and in admin fields: it must display as text.
 - [ ] POST without CSRF token (e.g. `curl`) → rejected.
 - [ ] Confirm `/.env`, `/app/`, `/storage/`, `/database/` return 403/404 on the deployed host.
@@ -59,6 +64,8 @@ Everything below needs a computer (or a cloud PHP environment). **Nothing here h
 - [ ] Check that the app sees each visitor's real IP (not a shared proxy address). Rate limits are per IP: if every visitor shares one address they will lock each other out. Only if the host's proxy sets `X-Forwarded-For`, set `TRUST_PROXY_HEADERS=true`.
 - [ ] Check whether outbound SMTP works from the host (step 6 again on the live host). If not, choose another host or an HTTP email API (would need a small code change).
 - [ ] Set up backups (database export schedule) and write down the rollback plan **before** pointing the real domain at it.
+
+- [ ] Submit `https://your-domain/sitemap.xml` to Google Search Console and Bing Webmaster Tools.
 
 ## 9. Content and business items to confirm with the owner
 - [ ] Replace placeholder data (team, testimonials, case-study clients) with real information.

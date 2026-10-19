@@ -36,7 +36,9 @@ final class Security
         if (!Config::bool('APP_FORCE_HTTPS') || self::isHttps() || PHP_SAPI === 'cli') {
             return false;
         }
-        $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        // Prefer the configured site address over the (client-supplied) Host header.
+        $configured = parse_url(Config::get('APP_URL', '') ?? '', PHP_URL_HOST);
+        $host = is_string($configured) && $configured !== '' ? $configured : (string) ($_SERVER['HTTP_HOST'] ?? '');
         if ($host === '' || preg_match('/^[A-Za-z0-9.\-:]+$/', $host) !== 1) {
             return false;
         }

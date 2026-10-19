@@ -52,10 +52,10 @@ final class SetupController extends Controller
         return $s;
     }
 
-    /** @param array<string,mixed> $extra */
-    private static function show(array $extra = [], int $status = 200): Response
+    /** @param array<string,mixed> $extra  Status details are only shown once the setup token has been proven. */
+    private static function show(array $extra = [], int $status = 200, bool $withStatus = false): Response
     {
-        return self::page('setup/index', ['s' => self::status(), 'msg' => '', 'err' => '', 'old' => []] + $extra, [
+        return self::page('setup/index', ['s' => $withStatus ? self::status() : null, 'msg' => '', 'err' => '', 'old' => []] + $extra, [
             'title' => 'Setup — Daylight', 'noindex' => '1',
         ], $status);
     }
@@ -87,15 +87,15 @@ final class SetupController extends Controller
                 if ($r->input('seed') === '1') {
                     $msg .= Migrator::seedContent(ROOT . '/database/seeds/content.sql') ? ' Original site content loaded.' : ' Content already present, so it was not loaded again.';
                 }
-                return self::show(['msg' => $msg]);
+                return self::show(['msg' => $msg], 200, true);
             }
             if ($action === 'admin') {
                 $st = self::status();
                 if (!$st['migrated']) {
-                    return self::show(['err' => 'Run the database step first.'], 409);
+                    return self::show(['err' => 'Run the database step first.'], 409, true);
                 }
                 if ($st['admin']) {
-                    return self::show(['err' => 'An administrator already exists. Create more users from the admin area.'], 409);
+                    return self::show(['err' => 'An administrator already exists. Create more users from the admin area.'], 409, true);
                 }
                 [$clean, $errors] = Validator::validate($r->post(), [
                     'email' => ['type' => 'email', 'required' => true, 'label' => 'Email'],
@@ -106,7 +106,7 @@ final class SetupController extends Controller
                     $errors['password'] = $pe;
                 }
                 if ($errors !== []) {
-                    return self::show(['err' => implode(' ', $errors), 'old' => ['email' => $r->input('email'), 'full_name' => $r->input('full_name')]], 422);
+                    return self::show(['err' => implode(' ', $errors), 'old' => ['email' => $r->input('email'), 'full_name' => $r->input('full_name')]], 422, true);
                 }
                 $existing = Db::one('SELECT id FROM users WHERE email = ?', [$clean['email']]);
                 $id = $existing !== null ? (string) $existing['id'] : Db::insert('users', [
@@ -114,12 +114,12 @@ final class SetupController extends Controller
                     'full_name' => $clean['full_name'], 'email_verified_at' => gmdate('Y-m-d H:i:s'),
                 ]);
                 Db::insert('user_roles', ['user_id' => $id, 'role' => 'super_admin']);
-                return self::show(['msg' => 'Super admin created. Now remove SETUP_TOKEN from your configuration, then sign in.']);
+                return self::show(['msg' => 'Super admin created. Now remove SETUP_TOKEN from your configuration, then sign in.'], 200, true);
             }
         } catch (\Throwable $e) {
             Errors::log('setup failed: ' . $e->getMessage());
-            return self::show(['err' => 'That step failed. Check storage/logs for details and confirm the DB_* settings.'], 500);
+            return self::show(['err' => 'That step failed. Check storage/logs for details and confirm the DB_* settings.'], 500, true);
         }
-        return self::show(['err' => 'Unknown action.'], 400);
+        return self::show(['err' => 'Unknown action.'], 400, true);
     }
 }

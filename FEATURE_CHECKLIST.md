@@ -35,7 +35,10 @@ Header (sticky, 6 nav links, mobile menu, theme toggle, account button, CTA) · 
 | Roles + server-side access control | Implemented · Static | staff / admin / super_admin / client |
 | DB-backed public content | Implemented · Static | published flag, ordering as original |
 | Original seed content | Implemented · structure checked with SQLite stand-in | MySQL load unverified |
-| One-time web setup (`/setup`) | Implemented · Static | for hosts without SSH |
+| One-time web setup (`/setup`) | Implemented · Static | for hosts without SSH; shows nothing without the token |
+| `/sitemap.xml` + `/robots.txt` | Implemented · Static | added; not in the original site; needs `APP_URL` |
+| Security hardening (CSRF, CSP, rate limits, no-store, role checks) | Implemented · Static (audit script) | see SECURITY_REVIEW.md |
+| Public CSS/JS (menu, theme toggle, accordion, forms) | Implemented · **Tested in a browser against sample data** (not against the PHP app) | 108 renders + 30 interaction checks |
 
 ## Client portal (new UI, approved)
 Dashboard, projects, project detail (milestones, shared documents, messages), invoices + detail (items, payments, balance), support tickets (create/list): **Implemented · Static**. Ownership is enforced in every query; draft invoices and hidden documents are not shown.

@@ -15,6 +15,7 @@ No React, no Node and no Composer packages are needed at runtime. The original R
 - **Accounts** — register, sign in/out, password reset and optional email confirmation (both need working SMTP).
 - **Client portal** (`/portal`) — projects with progress, milestones, shared documents, project messages, support tickets, invoices and payments. Clients only see records linked to their own account.
 - **Admin** (`/admin`) — dashboard, inbox (contact messages, quote requests, job applications), clients, projects, milestones, documents, tickets, invoices (auto totals), payments, all website content, company settings, users and roles.
+- **Search engines** — `/sitemap.xml` (generated from the database, published pages only) and `/robots.txt`; see `SITEMAP.md`.
 - **Setup page** (`/setup`) for hosts without SSH — creates tables, loads the original content, creates the first super admin. Off unless `SETUP_TOKEN` is set.
 
 ## Requirements
@@ -35,6 +36,8 @@ php -S localhost:8000 -t public tools/dev-router.php
 
 Create the first admin: set `SETUP_TOKEN` to a random 32+ character string in `.env`, open <http://localhost:8000/setup>, then remove the token.
 (With SSH/CLI you can also insert a user and a `super_admin` row in `user_roles` by hand.)
+
+Search engines: set `APP_URL`, then open `/sitemap.xml`; submit it in Google Search Console.
 
 Optional dummy data for testing the portal: set `ALLOW_DEMO_DATA=true`, sign in as super admin and use **Dashboard → Demo data**. Everything is labelled `[DEMO]` and can be removed again.
 
@@ -78,6 +81,10 @@ Point the web root at `public/` (delete the root `.htaccess`), keep everything e
 php tests/unit.php                       # no database needed
 TEST_DB_HOST=127.0.0.1 TEST_DB_NAME=daylight_test TEST_DB_USER=root TEST_DB_PASS= php tests/integration.php   # DROPS all tables in that DB
 python3 tools/lint.py                    # best-effort static checks (not a replacement for `php -l`)
+python3 tools/lint_deep.py               # missing terminators, views vs. controller data
+python3 tools/security_audit.py          # attacker's checklist over the code (see SECURITY_REVIEW.md)
+# CSS/JS in a real browser against an approximate rendering (needs Node + `npm i playwright`):
+python3 tools/preview_static.py /tmp/preview && node tools/browser/shoot.js && node tools/browser/interact.js && node tools/browser/theme.js
 for f in $(find app public tests bin tools config -name '*.php'); do php -l "$f"; done
 ```
 
@@ -86,7 +93,7 @@ for f in $(find app public tests bin tools config -name '*.php'); do php -l "$f"
 ```
 public/            document root: index.php (front controller), css/app.css, js/
 app/Core/          config, request/response, router, db (PDO), session, csrf, auth, validator, mailer, migrator
-app/Controllers/   public pages, forms, auth, portal, admin (generic CRUD driven by config/resources.php), users, setup
+app/Controllers/   public pages, forms, auth, portal, admin (generic CRUD driven by config/resources.php), users, setup, sitemap/robots
 app/Admin/         resource registry, hooks (invoice totals, slugs…), demo-data seeder
 app/Views/         PHP templates (layouts, partials, pages, auth, portal, admin)
 config/            resources.php (admin screens), .env.example lives in the project root
@@ -100,7 +107,7 @@ tests/, tools/     unit + integration tests, static checker, dev router
 Prepared statements everywhere (identifiers come from fixed config), `password_hash`, CSRF on every POST, output escaping in all templates,
 session cookie `HttpOnly` + `SameSite=Lax` (+ `Secure` over HTTPS), session ID regenerated on login, rate limits on forms/login/reset,
 honeypots, strict CSP (no inline scripts or styles), `X-Frame-Options`, `nosniff`, server-side role checks on every admin/portal route,
-generic error page (details only in `storage/logs`). Password-reset responses do not reveal whether an account exists.
+generic error page (details only in `storage/logs`), `no-store` on private pages. Password-reset responses do not reveal whether an account exists. Full review: `SECURITY_REVIEW.md`.
 Not yet implemented: file uploads (documents are links), two-factor sign-in, account-lockout emails, server-side session invalidation on password reset.
 
 ## Known limitations
