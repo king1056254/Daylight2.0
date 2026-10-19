@@ -9,3 +9,5 @@ vendor/
 node_modules/
 *.zip
 /config.local.php
+*.png
+/tools/browser/out/
