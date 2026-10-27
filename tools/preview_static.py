@@ -38,7 +38,10 @@ def code_events(code):
         m = min(cands, key=lambda x: x.start())
         text = m.group(0)
         if text.startswith('return'):
-            ev.append(('return',)); i = m.end(); continue
+            before = code[:m.start()]
+            if before.count('{') - before.count('}') <= 0:
+                ev.append(('return',))
+            i = m.end(); continue
         if text.startswith(('end', 'else')) and not text.startswith('elseif'):
             ev.append(('else',) if text.startswith('else') else ('end',)); i = m.end(); continue
         end = match_paren(code, m.end() - 1)
@@ -132,6 +135,95 @@ def render_file(name, ctx):
     s, _ = render_nodes(build(src), ctx)
     return s
 
+
+import html as _html, json as _json
+ESC = lambda v: _html.escape(str(v), quote=True)
+
+def php_array(src):
+    """Tiny parser for the PHP array literals in config/legal_*.php (strings, nested [] arrays, => pairs)."""
+    src = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
+    src = src[src.index('return') + 6:]
+    pos = [0]
+    def ws():
+        while pos[0] < len(src) and src[pos[0]] in ' \t\r\n,;': pos[0] += 1
+    def string():
+        q = src[pos[0]]; pos[0] += 1; out = ''
+        while src[pos[0]] != q:
+            if src[pos[0]] == '\\' and src[pos[0] + 1] in (q, '\\'): out += src[pos[0] + 1]; pos[0] += 2
+            else: out += src[pos[0]]; pos[0] += 1
+        pos[0] += 1
+        return out
+    def value():
+        ws()
+        if src[pos[0]] == '[': return array()
+        if src[pos[0]] in '\'"': return string()
+        m = re.compile(r'[A-Za-z0-9_.]+').match(src, pos[0]); pos[0] = m.end(); return m.group(0)
+    def array():
+        pos[0] += 1; items = []; assoc = False
+        while True:
+            ws()
+            if src[pos[0]] == ']': pos[0] += 1; break
+            v = value(); ws()
+            if src.startswith('=>', pos[0]):
+                pos[0] += 2; items.append((v, value())); assoc = True
+            else: items.append(v)
+        return dict(items) if assoc else items
+    return value()
+
+def legal_text(text, vars_):
+    for k, v in vars_.items(): text = text.replace('{{' + k + '}}', v)
+    h = ESC(text)
+    h = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', h)
+    def link(m):
+        href = m.group(2)
+        if href.startswith('/'): return f'<a href="{ESC(href)}" class="legal-link">{m.group(1)}</a>'
+        return f'<a href="{ESC(href)}" class="legal-link" target="_blank" rel="noopener noreferrer">{m.group(1)}</a>'
+    return re.sub(r'\[([^\]]+)\]\((/[A-Za-z0-9_\-/#.]*|https://[A-Za-z0-9._~\-/#?=%:]+)\)', link, h)
+
+def legal_page(name):
+    doc = php_array((ROOT / f'config/legal_{name}.php').read_text())
+    v = {'company': 'Daylight', 'email': 'team@example.com', 'location': 'Nairobi, Kenya'}
+    out = [f'<section class="hero"><div class="grid-backdrop"></div><div class="hero-inner"><p class="eyebrow">Legal</p><h1>{ESC(doc["title"])}</h1><p class="lead">Version {ESC(doc["version"])} · Last updated {ESC(doc["effective"])}</p></div></section>',
+           '<section class="section section-3xl legal">']
+    out += [f'<p class="legal-intro">{legal_text(p, v)}</p>' for p in doc['intro']]
+    out.append('<nav class="legal-toc" aria-label="Contents"><h2>Contents</h2><ol>' + ''.join(f'<li><a href="#{ESC(s["id"])}">{ESC(s["title"])}</a></li>' for s in doc['sections']) + '</ol></nav>')
+    for n, sec in enumerate(doc['sections'], 1):
+        out.append(f'<section id="{ESC(sec["id"])}" class="legal-section"><h2><span class="legal-num">{n}.</span> {ESC(sec["title"])}</h2>')
+        for b in sec['blocks']:
+            if b[0] == 'p': out.append(f'<p>{legal_text(b[1], v)}</p>')
+            elif b[0] in ('ul', 'ol'): out.append(f'<{b[0]} class="legal-list legal-{b[0]}">' + ''.join(f'<li>{legal_text(i, v)}</li>' for i in b[1]) + f'</{b[0]}>')
+            elif b[0] == 'table':
+                out.append('<div class="table-wrap legal-table"><table class="data-table"><thead><tr>' + ''.join(f'<th>{ESC(h)}</th>' for h in b[1]) + '</tr></thead><tbody>'
+                           + ''.join('<tr>' + ''.join(f'<td data-label="{ESC(b[1][ci])}">{legal_text(c, v)}</td>' for ci, c in enumerate(row)) + '</tr>' for row in b[2]) + '</tbody></table></div>')
+        out.append('</section>')
+    out.append(f'<p class="legal-foot">Version {ESC(doc["version"])} · effective {ESC(doc["effective"])}</p></section>')
+    return ''.join(out)
+
+def faq_page():
+    sql = (ROOT / 'database/seeds/content.sql').read_text() + (ROOT / 'database/migrations/005_extended_faqs.sql').read_text()
+    rows = []
+    for m in re.finditer(r"\(UUID\(\), '((?:[^']|'')*)','((?:[^']|'')*)','([^']*)',(\d+)\)", sql.split('INSERT INTO faqs')[1].split('INSERT INTO job_openings')[0]):
+        rows.append((m.group(1).replace("''", "'"), m.group(2).replace("''", "'"), m.group(3)))
+    for m in re.finditer(r"SELECT UUID\(\), '((?:[^']|'')*)', '((?:[^']|'')*)', '([^']*)', (\d+), 1", sql):
+        rows.append((m.group(1).replace("''", "'"), m.group(2).replace("''", "'"), m.group(3)))
+    order = ['Getting started', 'Pricing', 'Projects', 'Client portal', 'Support', 'Legal', 'Data protection', 'AI assistant']
+    groups = {}
+    for i, (q, a, c) in enumerate(rows): groups.setdefault(c, []).append((i, q, a))
+    cats = sorted(groups, key=lambda c: (order.index(c) if c in order else 999, c))
+    slug = lambda c: re.sub(r'[^a-z0-9]+', '-', c.lower()).strip('-')
+    chev = ICONS['chevron-down']
+    out = ['<section class="hero"><div class="grid-backdrop"></div><div class="hero-inner"><p class="eyebrow">FAQ</p><h1>Questions we get asked</h1><p class="lead">If your question isn\'t here, send it to us and we\'ll answer it properly.</p></div></section><section class="section section-3xl">',
+           '<div class="faq-tools"><div class="faq-search"><label class="sr-only" for="faq-search">Search the questions</label><input id="faq-search" class="input" type="search" placeholder="Search the questions…" autocomplete="off" data-faq-filter></div><nav class="faq-cats" aria-label="Question categories">'
+           + ''.join(f'<a href="#faq-cat-{slug(c)}" class="assistant-chip">{ESC(c)}</a>' for c in cats) + '</nav></div>',
+           '<p class="faq-empty muted text-sm" data-faq-empty hidden>No question matches your search. Try different words, or ask us directly.</p>']
+    for c in cats:
+        out.append(f'<div class="faq-group" id="faq-cat-{slug(c)}" data-faq-group><h2 class="eyebrow">{ESC(c)}</h2><div class="accordion">')
+        for i, q, a in groups[c]:
+            out.append(f'<details name="faq" id="faq-{i}" data-faq-item><summary><span>{ESC(q)}</span><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">{chev}</svg></summary><div class="answer">{ESC(a)}</div></details>')
+        out.append('</div></div>')
+    out.append('<div class="mt-10"><a href="#" class="btn">Ask us something else</a></div></section>')
+    return ''.join(out)
+
 def shell(body, dark, css_path, title='Preview'):
     js = str(ROOT / 'public/js')
     return f'''<!DOCTYPE html><html lang="en" class="{'dark' if dark else ''}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{title}</title>
@@ -141,7 +233,7 @@ def shell(body, dark, css_path, title='Preview'):
 PAGES = {
     'home': ('site', 'pages/home'), 'services': ('site', 'pages/services'), 'work-detail': ('site', 'pages/work_detail'),
     'contact': ('site', 'pages/contact'), 'quote': ('site', 'pages/quote'), 'faq': ('site', 'pages/faq'), 'careers': ('site', 'pages/careers'),
-    'about': ('site', 'pages/about'), 'auth': ('site', 'auth/index'), 'privacy': ('site', 'pages/legal'),
+    'about': ('site', 'pages/about'), 'auth': ('site', 'auth/index'), 'privacy': ('site', 'pages/legal'), 'terms': ('site', 'pages/legal'),
     'portal-dashboard': ('app', 'portal/dashboard'), 'portal-project': ('app', 'portal/project'), 'portal-invoice': ('app', 'portal/invoice'),
     'portal-tickets': ('app', 'portal/tickets'), 'admin-dashboard': ('app', 'admin/dashboard'), 'admin-list': ('app', 'admin/list'),
     'admin-form': ('app', 'admin/form'), 'admin-users': ('app', 'admin/users'),
@@ -151,15 +243,22 @@ if __name__ == '__main__':
     out = pathlib.Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
     css = str(ROOT / 'public/css/app.css')
     for key, (kind, view) in PAGES.items():
+        area_is_portal = key.startswith('portal')
         ctx = {'title': 'Sample page title', 'eyebrow': 'Eyebrow', 'description': 'Sample description text that explains the page in a sentence or two.', 'mode': 'in', 'user': None, 'area': 'portal' if key.startswith('portal') else 'admin'}
+        widget = lambda: render_file('partials/assistant', ctx) + f'<script src="file://{ROOT}/public/js/assistant.js"></script>'
         if kind == 'site':
-            body = '<div class="page">' + render_file('partials/header', ctx) + '<main>' + render_file(view, ctx) + '</main>' + render_file('partials/footer', ctx) + '</div>'
+            main = {'faq': faq_page, 'privacy': lambda: legal_page('privacy'), 'terms': lambda: legal_page('terms')}.get(key, lambda: render_file(view, ctx))()
+            body = '<div class="page">' + render_file('partials/header', ctx) + '<main>' + main + '</main>' + render_file('partials/footer', ctx) + '</div>' + widget()
         else:
             ctx['__content'] = render_file(view, ctx)
             ctx['pageTitle'] = 'Preview'
             body = render_file('layout/app', ctx)
             body = re.sub(r'<!DOCTYPE.*?<body>', '', body, flags=re.S).replace('</body>', '').replace('</html>', '')
             body = re.sub(r'<script[^>]*></script>', '', body)
+            if area_is_portal: body += f'<script src="file://{ROOT}/public/js/assistant.js"></script>'
+            if not area_is_portal:  # the layout includes the widget for the portal only (the fake renderer cannot evaluate that condition)
+                body = re.sub(r'<div id="daylight-assistant".*?</section>\s*</div>', '', body, flags=re.S)
+                body = re.sub(r'<script src="[^"]*assistant\.js"></script>', '', body)
         for dark in (False, True):
             (out / f'{key}-{"dark" if dark else "light"}.html').write_text(shell(body, dark, css, key))
     print('wrote', len(PAGES) * 2, 'files to', out)

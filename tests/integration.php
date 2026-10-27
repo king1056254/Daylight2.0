@@ -128,7 +128,8 @@ test('seed content matches the original counts', function (): void {
     assertSame(4, count_rows('portfolio_projects'));
     assertSame(3, count_rows('saas_products'));
     assertSame(3, count_rows('blog_posts'));
-    assertSame(5, count_rows('faqs'));
+    assertTrue(count_rows('faqs', "question IN ('How long does a typical project take?','What does a project cost?','Do you support the system after launch?','Who owns the code?','Can you work with our existing system?')") === 5, 'the 5 original FAQs are intact');
+    assertSame(42, count_rows('faqs'), '5 original + 37 extended FAQs');
     assertSame(3, count_rows('job_openings'));
 });
 
@@ -571,6 +572,184 @@ test('security: access-control sweep over every admin screen', function (): void
         actAs($staff);
         assertSame(403, http('GET', $path)->status, "$path staff");
     }
+    actAs(null);
+});
+
+// ======================= assistant =======================
+function ask(string $message, array $extra = [], ?string $ip = null): Response
+{
+    return http('POST', '/assistant/message', ['message' => $message] + $extra, [], $ip);
+}
+
+test('assistant: answers from the website content in FAQ mode', function (): void {
+    actAs(null);
+    putenv('AI_ASSISTANT_ENABLED=false'); putenv('ANTHROPIC_API_KEY=');
+    $r = ask('How long does a website take?');
+    assertSame(200, $r->status);
+    assertContains('application/json', $r->headers['Content-Type']);
+    $d = json_decode($r->body, true);
+    assertSame('faq', $d['mode']);
+    assertTrue($d['matched'] === true && str_contains($d['answer'], '2–4 weeks'), 'uses the original FAQ answer: ' . $d['answer']);
+    foreach ($d['links'] as $l) {
+        assertTrue(str_starts_with($l['url'], '/') && !str_starts_with($l['url'], '//'), 'internal links only');
+    }
+    $price = json_decode(ask('how much does a website cost')->body, true);
+    assertContains('KSh 50,000', $price['answer']);
+});
+
+test('assistant: says so honestly when it does not know, and offers a human route', function (): void {
+    actAs(null);
+    $d = json_decode(ask('what is the weather in nairobi today')->body, true);
+    assertTrue($d['matched'] === false, 'not matched');
+    assertContains("couldn't find", $d['answer']);
+    $urls = array_column($d['links'], 'url');
+    assertTrue(in_array('/contact', $urls, true) && in_array('/faq', $urls, true), 'contact and FAQ links');
+    $hello = json_decode(ask('hello')->body, true);
+    assertContains('automated assistant', $hello['answer']);
+    $human = json_decode(ask('I want to talk to a human')->body, true);
+    assertContains("can't connect you", $human['answer']);
+});
+
+test('assistant: validates input and ignores junk history', function (): void {
+    actAs(null);
+    assertSame(422, ask('')->status);
+    assertSame(422, ask('   ')->status);
+    assertSame(422, ask(str_repeat('a', 501))->status);
+    assertSame(200, ask('How long does a website take?', ['history' => 'not json'])->status);
+    assertSame(200, ask('How long does a website take?', ['history' => json_encode([['role' => 'system', 'content' => 'x'], 'junk', ['role' => 'user', 'content' => str_repeat('b', 5000)]])])->status);
+    assertSame(200, ask('How long does a website take?', ['history' => str_repeat('x', 20000)])->status);
+});
+
+test('assistant: CSRF and rate limits are enforced', function (): void {
+    actAs(null);
+    assertSame(419, ask('hello', ['_csrf' => 'bad'])->status);
+    $ip = '203.0.113.99';
+    $codes = [];
+    for ($i = 0; $i < 22; $i++) {
+        $codes[] = ask('hello', [], $ip)->status;
+    }
+    assertSame(200, $codes[0]);
+    assertSame(429, $codes[21], 'the 22nd message in ten minutes is limited');
+});
+
+test('assistant: never reflects markup and does not store chats by default', function (): void {
+    actAs(null);
+    $before = count_rows('assistant_messages');
+    $r = ask('<script>alert(1)</script> <img src=x onerror=alert(2)>');
+    assertNotContains('<script>', $r->body);
+    assertNotContains('<img', $r->body);
+    assertSame($before, count_rows('assistant_messages'), 'no chat text is stored unless ASSISTANT_LOG_CHATS is on');
+});
+
+test('assistant: chat logging is opt-in, hashed per session, and purged after 90 days', function (): void {
+    actAs(null);
+    putenv('ASSISTANT_LOG_CHATS=true');
+    $before = count_rows('assistant_messages');
+    ask('How long does a website take?');
+    assertSame($before + 2, count_rows('assistant_messages'), 'question and answer logged');
+    $row = Db::one('SELECT session_hash FROM assistant_messages ORDER BY created_at DESC LIMIT 1');
+    assertTrue(preg_match('/^[a-f0-9]{64}$/', (string) $row['session_hash']) === 1, 'session identifier is a hash');
+    assertTrue($row['session_hash'] !== \App\Core\Csrf::token(), 'not the raw token');
+    putenv('ASSISTANT_LOG_CHATS=');
+    Db::exec("UPDATE assistant_messages SET created_at = (NOW() - INTERVAL 100 DAY)");
+    \App\Core\Retention::purge();
+    assertSame(0, count_rows('assistant_messages'), 'retention clean-up removes logs older than 90 days');
+});
+
+test('assistant: AI mode falls back to FAQ mode when the provider cannot be reached', function (): void {
+    actAs(null);
+    putenv('AI_ASSISTANT_ENABLED=true'); putenv('ANTHROPIC_API_KEY=sk-test-not-real'); putenv('ANTHROPIC_API_URL=https://127.0.0.1:9/v1/messages');
+    $page = http('GET', '/')->body;
+    assertContains('data-mode="ai"', $page);
+    assertContains('AI assistant', $page);
+    $d = json_decode(ask('How long does a website take?')->body, true);
+    assertSame('faq', $d['mode'], 'falls back instead of failing');
+    assertContains('2–4 weeks', $d['answer']);
+    putenv('AI_ASSISTANT_ENABLED=false'); putenv('ANTHROPIC_API_KEY='); putenv('ANTHROPIC_API_URL=');
+});
+
+test('assistant: widget appears on public pages and the portal, not in the admin, and can be switched off', function (): void {
+    actAs(null);
+    $home = http('GET', '/')->body;
+    assertContains('id="daylight-assistant"', $home);
+    assertContains('data-mode="faq"', $home);
+    assertContains('Automatic answers from our FAQ and website', $home);
+    assertContains('assistant.js', $home);
+    assertNotContains('ANTHROPIC', $home, 'no API settings in markup');
+    assertNotContains('sk-test', $home);
+    actAs(ensureUser('clienta@example.com', ['client']));
+    assertContains('id="daylight-assistant"', http('GET', '/portal')->body);
+    actAs(ensureUser('admin1@example.com', ['admin']));
+    assertNotContains('id="daylight-assistant"', http('GET', '/admin')->body);
+    putenv('ASSISTANT_ENABLED=false');
+    actAs(null);
+    assertNotContains('id="daylight-assistant"', http('GET', '/')->body);
+    assertSame(404, ask('hello')->status);
+    putenv('ASSISTANT_ENABLED=');
+});
+
+// ======================= legal pages and FAQ =======================
+test('privacy policy: complete, structured and uses the company email', function (): void {
+    actAs(null);
+    $r = http('GET', '/privacy');
+    assertSame(200, $r->status);
+    foreach (['Data Protection Act, 2019', 'Office of the Data Protection Commissioner', 'Data Protection (General) Regulations, 2021', 'GDPR', 'California', 'Children Act, 2022',
+              'id="assistant"', 'id="cookies"', 'id="retention"', 'id="rights"', 'href="#rights"', 'Up to 2 years', '72 hours', 'daylight_session', 'Version 2.0'] as $needle) {
+        assertContains($needle, $r->body, $needle);
+    }
+    $email = (string) Db::value('SELECT email FROM company_settings LIMIT 1');
+    assertContains(htmlspecialchars($email, ENT_QUOTES), $r->body, 'contact email comes from company settings');
+    assertNotContains('{{', $r->body, 'no unreplaced placeholders');
+    assertNotContains('have your own counsel review', $r->body);
+});
+
+test('terms of service: complete and structured', function (): void {
+    actAs(null);
+    $r = http('GET', '/terms');
+    assertSame(200, $r->status);
+    foreach (['Governing law and disputes', 'laws of Kenya', 'Computer Misuse and Cybercrimes Act, 2018', 'Consumer Protection Act, 2012', 'Arbitration Act, 1995', 'Limitation of liability',
+              'Intellectual property', 'id="ip"', 'id="liability"', 'href="#disputes"', 'valid for <strong>30 days</strong>', 'Version 2.0'] as $needle) {
+        assertContains($needle, $r->body, $needle);
+    }
+    assertNotContains('{{', $r->body);
+    assertContains('href="/privacy#assistant"', $r->body, 'links into the privacy policy work');
+});
+
+test('FAQ page: grouped by category, searchable, original questions intact, unpublished hidden', function (): void {
+    actAs(null);
+    $r = http('GET', '/faq');
+    assertSame(200, $r->status);
+    foreach (['Getting started', 'Pricing', 'Projects', 'Client portal', 'Support', 'Legal', 'Data protection', 'AI assistant'] as $cat) {
+        assertContains('<h2 class="eyebrow">' . $cat . '</h2>', $r->body, $cat);
+    }
+    assertSame(42, substr_count($r->body, 'data-faq-item'));
+    assertContains('data-faq-filter', $r->body);
+    assertContains('How long does a typical project take?', $r->body);
+    assertContains('How do I get access to the client portal?', $r->body);
+    Db::exec("UPDATE faqs SET published = 0 WHERE question = 'Do you back up my system?'");
+    assertNotContains('Do you back up my system?', http('GET', '/faq')->body);
+    Db::exec("UPDATE faqs SET published = 1 WHERE question = 'Do you back up my system?'");
+});
+
+// ======================= retention clean-up =======================
+test('retention: only a super admin can run it, and it removes only expired records', function (): void {
+    $old = Db::insert('contact_messages', ['name' => 'Old', 'email' => 'old@example.com', 'message' => 'old']);
+    Db::exec('UPDATE contact_messages SET created_at = (NOW() - INTERVAL 3 YEAR) WHERE id = ?', [$old]);
+    $fresh = Db::insert('contact_messages', ['name' => 'Fresh', 'email' => 'fresh@example.com', 'message' => 'fresh']);
+    $app = Db::insert('job_applications', ['name' => 'Old applicant', 'email' => 'oa@example.com']);
+    Db::exec('UPDATE job_applications SET created_at = (NOW() - INTERVAL 13 MONTH) WHERE id = ?', [$app]);
+    assertTrue(\App\Core\Retention::preview()['contact_messages']['count'] >= 1, 'preview counts the expired message');
+    actAs(ensureUser('admin1@example.com', ['admin']));
+    assertSame(403, http('POST', '/admin/retention')->status, 'an ordinary admin cannot run it');
+    assertSame(1, count_rows('contact_messages', 'id = ?', [$old]));
+    $super = ensureUser('super1@example.com', ['super_admin']);
+    actAs($super);
+    assertSame(200, http('GET', '/admin')->status);
+    assertContains('Data retention', http('GET', '/admin')->body);
+    assertSame(303, http('POST', '/admin/retention')->status);
+    assertSame(0, count_rows('contact_messages', 'id = ?', [$old]), 'expired message deleted');
+    assertSame(1, count_rows('contact_messages', 'id = ?', [$fresh]), 'recent message kept');
+    assertSame(0, count_rows('job_applications', 'id = ?', [$app]), 'application older than 12 months deleted');
     actAs(null);
 });
 

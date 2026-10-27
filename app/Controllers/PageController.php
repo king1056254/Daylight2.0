@@ -154,21 +154,24 @@ final class PageController extends Controller
         ]);
     }
 
+    /** @return array<string,string> */
+    private static function legalVars(): array
+    {
+        $settings = Content::settings();
+        return [
+            'company' => (string) ($settings['company_name'] ?? 'Daylight'),
+            'email' => (string) ($settings['email'] ?? ''),
+            'location' => 'Nairobi, Kenya',
+        ];
+    }
+
     public static function privacy(): Response
     {
-        return self::page('pages/legal', [
-            'title' => 'Privacy policy',
-            'description' => 'This is a plain-language summary. Have your own counsel review it before you rely on it as a legal document.',
-            'sections' => [
-                ['What we collect', 'When you contact us, request a quote or apply for a job, we collect the details you submit — name, email, phone, company and the content of your message. Client portal accounts also store your profile details and the records tied to your projects.'],
-                ['How we use it', 'Only to respond to you, deliver and support your project, and meet our legal and accounting obligations. We do not sell personal data or share it with advertisers.'],
-                ['Where it is stored', 'Data is stored on managed cloud infrastructure with access restricted to Daylight staff who need it. Client portal records are protected so that each client can only access their own data.'],
-                ['How long we keep it', 'Enquiries are kept for up to two years. Project and financial records are kept for seven years as required for tax and audit purposes.'],
-                ['Your rights', 'You can ask us for a copy of the personal data we hold about you, ask us to correct it, or ask us to delete it where we are not legally required to keep it. Email us and we will respond within 30 days.'],
-            ],
-        ], [
+        /** @var array<string,mixed> $doc */
+        $doc = require ROOT . '/config/legal_privacy.php';
+        return self::page('pages/legal', ['doc' => $doc, 'vars' => self::legalVars()], [
             'title' => 'Privacy policy — Daylight',
-            'description' => 'How Daylight collects, uses, stores and protects personal data submitted through this site.',
+            'description' => (string) $doc['description'],
             'og_title' => 'Privacy policy — Daylight',
             'og_description' => 'How we handle personal data.',
         ]);
@@ -176,19 +179,11 @@ final class PageController extends Controller
 
     public static function terms(): Response
     {
-        return self::page('pages/legal', [
-            'title' => 'Terms of service',
-            'description' => 'A plain-language summary. Have your own counsel review it before you rely on it as a legal document.',
-            'sections' => [
-                ['Using this site', 'You may use this website for lawful purposes only. Content, designs and code shown here belong to Daylight or our clients unless stated otherwise.'],
-                ['Quotes and proposals', 'Quotes are estimates based on the scope described at the time and are valid for 30 days. Work begins once a written scope and payment schedule are agreed.'],
-                ['Ownership of work', 'On full payment, you own the custom source code and assets we build for you. Reusable internal libraries and our own SaaS products remain ours and are licensed to you for use in your system.'],
-                ['Client portal accounts', 'You are responsible for keeping your login details safe and for activity under your account. Tell us immediately if you think an account has been compromised.'],
-                ['Liability', 'We work carefully but cannot guarantee uninterrupted service. Our liability for any claim is limited to the fees paid for the work in question.'],
-            ],
-        ], [
+        /** @var array<string,mixed> $doc */
+        $doc = require ROOT . '/config/legal_terms.php';
+        return self::page('pages/legal', ['doc' => $doc, 'vars' => self::legalVars()], [
             'title' => 'Terms of service — Daylight',
-            'description' => 'The terms that apply to using the Daylight website, client portal and services.',
+            'description' => (string) $doc['description'],
             'og_title' => 'Terms of service — Daylight',
             'og_description' => 'Terms for using our website, portal and services.',
         ]);

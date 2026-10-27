@@ -87,7 +87,7 @@ for f in files:
         for seg in segs:
             for m in re.finditer(r'(?<![\w>:$\\])([a-z_][a-z0-9_]*)\s*\(', strip_php(seg)):
                 name = m.group(1)
-                if name in helpers or name in {'if','foreach','for','while','switch','elseif','array','isset','empty','count','implode','in_array','array_slice','array_filter','array_sum','array_map','rtrim','number_format','max','min','strncmp','strlen','preg_match','gmdate','mb_strlen','mb_substr','match','function','fn','list','static','return','echo','rawurlencode','ceil','str_replace','ucfirst','array_column','array_values','array_unique','array_fill','is_array','is_string','strtotime','date','rawurldecode','str_pad','array_keys','array_merge','substr','strtolower','array_key_exists','trim','explode','ucwords','unset','exit','use'}:
+                if name in helpers or name in {'if','foreach','for','while','switch','elseif','array','isset','empty','count','implode','in_array','array_slice','array_filter','array_sum','array_map','rtrim','number_format','max','min','strncmp','strlen','preg_match','gmdate','mb_strlen','mb_substr','match','function','fn','list','static','return','echo','rawurlencode','ceil','str_replace','ucfirst','array_column','array_values','array_unique','array_fill','is_array','is_string','strtotime','date','rawurldecode','str_pad','array_keys','array_merge','substr','strtolower','array_key_exists','trim','explode','ucwords','unset','exit','use','preg_replace','array_search','uksort','strcmp','trim','strtolower','str_starts_with','array_filter'}:
                     continue
                 problems.append(f'{rel}: unknown function {name}()')
     else:

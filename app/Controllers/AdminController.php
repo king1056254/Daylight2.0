@@ -9,6 +9,7 @@ use App\Core\Config;
 use App\Core\Db;
 use App\Core\Errors;
 use App\Core\Request;
+use App\Core\Retention;
 use App\Core\Response;
 
 final class AdminController extends Controller
@@ -36,7 +37,29 @@ final class AdminController extends Controller
             'skippedEmails' => $count("SELECT COUNT(*) FROM email_outbox WHERE status = 'skipped'"),
             'demoAllowed' => $demoAllowed,
             'demoExists' => $demoAllowed && DemoSeeder::exists(),
+            'retention' => Auth::isSuperAdmin() ? Retention::preview() : null,
         ], 'Dashboard — Admin');
+    }
+
+    public static function retention(Request $r): Response
+    {
+        if (($g = self::requireStaff()) !== null) {
+            return $g;
+        }
+        if (!Auth::isSuperAdmin()) {
+            return self::message('403', 'Not allowed', 'Only a super admin can run the retention clean-up.', 403);
+        }
+        if (($c = self::csrfFailure($r)) !== null) {
+            return $c;
+        }
+        try {
+            $done = Retention::purge();
+            self::notice('success', 'Retention clean-up finished: ' . array_sum($done) . ' old record(s) deleted.');
+        } catch (\Throwable $e) {
+            Errors::log('retention failed: ' . $e->getMessage());
+            self::notice('error', "The clean-up failed. Check the logs.");
+        }
+        return Response::redirect('/admin');
     }
 
     public static function demo(Request $r): Response

@@ -51,7 +51,8 @@ Migrations in `database/migrations/*.sql` (ordered, run once each by `bin/migrat
 9. Draft invoices are hidden from clients (the original schema's policy showed all statuses).
 10. `profiles` merged into `users`. Registration assigns **no role** (same as the original trigger); clients are linked to a company by an admin (`clients.user_id`).
 11. Added `/sitemap.xml` and `/robots.txt` (the original had neither) at the owner's request; remove the two routes if unwanted.
-12. `favicon.ico` not copied (binary). Lead status lists (e.g. New / In progress / Replied / Closed) are my assumption; the original only defined the default.
+12. Added at the owner's request (not in the original): the website chat assistant (FAQ mode by default; optional AI mode), a much more detailed Privacy policy and Terms of service (v2.0, structured, anchored), 37 additional client FAQs with categories and search (the 5 original FAQs are unchanged), a data-retention tool, and full system documentation. The original one-paragraph legal pages and the flat FAQ list are replaced by these richer versions; the original wording is kept where it stated a fact (retention 2/7 years, 30-day quotes, ownership on full payment, liability limited to fees paid, Kenyan law).
+13. `favicon.ico` not copied (binary). Lead status lists (e.g. New / In progress / Replied / Closed) are my assumption; the original only defined the default.
 
 ## 7. Assumptions
 PHP 8.0+ on the target host (unverified for InfinityFree); password policy 8–72 bytes (the original had min length 8); `APP_URL` is an origin only; the portal/admin scope is exactly what the original tables imply (projects, milestones, documents as links, messages, tickets, invoices with items and manual payments); no payment gateway, no uploads.

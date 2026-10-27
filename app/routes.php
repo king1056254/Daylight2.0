@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use App\Controllers\AdminController;
+use App\Controllers\AssistantController;
 use App\Controllers\AuthController;
 use App\Controllers\CrudController;
 use App\Controllers\FormController;
@@ -32,6 +33,9 @@ $router->get('/quote', [PageController::class, 'quote']);
 $router->get('/faq', [PageController::class, 'faq']);
 $router->get('/privacy', [PageController::class, 'privacy']);
 $router->get('/terms', [PageController::class, 'terms']);
+
+// ---- Website assistant (JSON) ----
+$router->post('/assistant/message', [AssistantController::class, 'message']);
 
 // ---- Search engines ----
 $router->get('/sitemap\.xml', [SeoController::class, 'sitemap']);
@@ -66,6 +70,7 @@ $router->post('/portal/tickets', [PortalController::class, 'createTicket']);
 // ---- Admin (fixed routes first, then generic resources) ----
 $router->get('/admin', [AdminController::class, 'dashboard']);
 $router->post('/admin/demo', [AdminController::class, 'demo']);
+$router->post('/admin/retention', [AdminController::class, 'retention']);
 $router->get('/admin/users', [UsersController::class, 'index']);
 $router->get('/admin/users/new', [UsersController::class, 'create']);
 $router->post('/admin/users', [UsersController::class, 'store']);

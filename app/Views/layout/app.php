@@ -67,6 +67,10 @@ $home = $area === 'admin' ? '/admin' : '/portal';
     <?= $content ?>
   </main>
 </div>
+<?php if ($area === 'portal'): ?>
+<?= partial('partials/assistant') ?>
+<script src="<?= e(asset('js/assistant.js')) ?>" defer></script>
+<?php endif; ?>
 <script src="<?= e(asset('js/app.js')) ?>" defer></script>
 </body>
 </html>

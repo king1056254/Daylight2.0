@@ -55,6 +55,16 @@ Everything below needs a computer (or a cloud PHP environment). **Nothing here h
 - [ ] Check response headers (CSP, X-Frame-Options, nosniff; HSTS once HTTPS is forced).
 - [ ] Confirm logs contain no passwords/tokens; confirm errors show the generic page with `APP_DEBUG=false`.
 
+## 7b. Chat assistant, legal documents and FAQ
+- [ ] `php tests/unit.php` and `php tests/integration.php` pass, including the assistant, legal, FAQ, retention and sitemap tests.
+- [ ] Open the site, click **Ask Daylight**: ask "How long does a website take?", "How do I use the client portal?", something off-topic, and "I want to talk to a person". Confirm honest answers and links; confirm the widget works on `/privacy` and in the portal and is absent in `/admin`.
+- [ ] Optional AI mode: set `AI_ASSISTANT_ENABLED=true` and `ANTHROPIC_API_KEY`; check the widget says "AI assistant", replies are short and grounded, and that stopping the network or using a wrong key falls back to FAQ mode without an error. Check the host allows outbound HTTPS.
+- [ ] Read **/privacy** and **/terms** on a phone (contents list, anchors, stacked tables) and a computer.
+- [ ] **Legal review**: work through `LEGAL_REVIEW.md` with a Kenyan advocate; tick the "facts that must be true" list; set the legal company name in Admin → Company settings.
+- [ ] Read all 42 FAQs in Admin → FAQs; edit anything that does not match how you actually work.
+- [ ] Run `php bin/purge.php --dry-run`, then the real clean-up; check the dashboard card as a super admin.
+- [ ] Run `python3 tools/schema_check.py`, `python3 tools/retriever_check.py` and the browser checks if you have Node/Python.
+
 ## 8. InfinityFree deployment (after everything above works locally)
 - [ ] Confirm the host's PHP version is 8.0+ and `pdo_mysql` is available (control panel / `phpinfo()` page, then delete it).
 - [ ] Upload by FTP, including hidden `.htaccess` files; confirm `.htaccess` rewriting works (clean URLs load; `/app/` is blocked).

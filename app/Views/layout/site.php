@@ -36,6 +36,8 @@ $ogDesc = $meta['og_description'] ?? $desc;
     </main>
     <?= partial('partials/footer') ?>
   </div>
+  <?= partial('partials/assistant') ?>
   <script src="<?= e(asset('js/app.js')) ?>" defer></script>
+  <script src="<?= e(asset('js/assistant.js')) ?>" defer></script>
 </body>
 </html>

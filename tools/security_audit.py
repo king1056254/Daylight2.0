@@ -15,7 +15,7 @@ import re, sys, pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 findings, notes = [], []
 
-SAFE_ECHO = re.compile(r"^(e\(|url\(|asset\(|partial\(|icon\(|status_pill\(|fmt_date\(|money\(|csrf_field\(|Cells::render\(|\(int\)|count\(|\d)")
+SAFE_ECHO = re.compile(r"^(e\(|legal_text\(|url\(|asset\(|partial\(|icon\(|status_pill\(|fmt_date\(|money\(|csrf_field\(|Cells::render\(|\(int\)|count\(|\d)")
 # variables that only ever hold constants or already-escaped markup (reviewed by hand)
 TRUSTED_VARS = {'$content': 'layout body, already rendered by a template', '$successHtml': 'literal strings from controllers', '$dot': 'constant CSS class chosen from a status'}
 

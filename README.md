@@ -7,6 +7,16 @@ No React, no Node and no Composer packages are needed at runtime. The original R
 > against a real server. See `TEST_REPORT.md` for exactly what has and has not been checked, and `COMPUTER_SETUP_CHECKLIST.md`
 > for the first things to do when you have a computer.
 
+## Documentation
+
+| Read this | For |
+|---|---|
+| `DOCUMENTATION.md` | **everything that was built**, how it works, how to run and extend it |
+| `LEGAL_REVIEW.md` | what a lawyer must check before the privacy policy and terms are relied on |
+| `SECURITY_REVIEW.md`, `TEST_REPORT.md` | what was checked and what was not |
+| `COMPUTER_SETUP_CHECKLIST.md` | the first things to do when you have a computer |
+| `MIGRATION_PLAN.md`, `FEATURE_CHECKLIST.md`, `SITEMAP.md` | decisions, status of every feature, site structure |
+
 ## What is included
 
 - **Public site** — same URLs and copy as the original: `/`, `/services`, `/services/{slug}`, `/work`, `/work/{slug}`, `/products`, `/industries`,
@@ -15,6 +25,10 @@ No React, no Node and no Composer packages are needed at runtime. The original R
 - **Accounts** — register, sign in/out, password reset and optional email confirmation (both need working SMTP).
 - **Client portal** (`/portal`) — projects with progress, milestones, shared documents, project messages, support tickets, invoices and payments. Clients only see records linked to their own account.
 - **Admin** (`/admin`) — dashboard, inbox (contact messages, quote requests, job applications), clients, projects, milestones, documents, tickets, invoices (auto totals), payments, all website content, company settings, users and roles.
+- **Website chat assistant** — floating "Ask Daylight" widget on the public site and client portal. Default FAQ mode answers from the site's own content on your server; optional AI mode (off by default, needs an API key). See `DOCUMENTATION.md` §9.
+- **Privacy policy and Terms of service** — detailed, structured, with contents lists and anchors (Kenya Data Protection Act 2019, GDPR and others). **Drafts: read `LEGAL_REVIEW.md` and have a Kenyan advocate review them.**
+- **Client FAQ** — 42 questions in 8 categories with search (5 original + 37 new).
+- **Data retention tool** — `php bin/purge.php` or a super-admin button deletes records older than the periods promised in the privacy policy.
 - **Search engines** — `/sitemap.xml` (generated from the database, published pages only) and `/robots.txt`; see `SITEMAP.md`.
 - **Setup page** (`/setup`) for hosts without SSH — creates tables, loads the original content, creates the first super admin. Off unless `SETUP_TOKEN` is set.
 
@@ -38,6 +52,8 @@ Create the first admin: set `SETUP_TOKEN` to a random 32+ character string in `.
 (With SSH/CLI you can also insert a user and a `super_admin` row in `user_roles` by hand.)
 
 Search engines: set `APP_URL`, then open `/sitemap.xml`; submit it in Google Search Console.
+
+Chat assistant: it works out of the box in FAQ mode. To turn on AI mode set `AI_ASSISTANT_ENABLED=true` and `ANTHROPIC_API_KEY` (see `.env.example`); to hide the assistant set `ASSISTANT_ENABLED=false`.
 
 Optional dummy data for testing the portal: set `ALLOW_DEMO_DATA=true`, sign in as super admin and use **Dashboard → Demo data**. Everything is labelled `[DEMO]` and can be removed again.
 
@@ -83,6 +99,10 @@ TEST_DB_HOST=127.0.0.1 TEST_DB_NAME=daylight_test TEST_DB_USER=root TEST_DB_PASS
 python3 tools/lint.py                    # best-effort static checks (not a replacement for `php -l`)
 python3 tools/lint_deep.py               # missing terminators, views vs. controller data
 python3 tools/security_audit.py          # attacker's checklist over the code (see SECURITY_REVIEW.md)
+python3 tools/schema_check.py            # schema vs admin config vs SQL column lists
+python3 tools/retriever_check.py         # quality of the assistant's answers on the real content
+python3 tools/gen_docs.py                # regenerate DOCUMENTATION.md tables after editing tools/documentation.template.md
+node tools/browser/assistant.js          # widget, FAQ search and legal-page checks (after preview_static.py)
 # CSS/JS in a real browser against an approximate rendering (needs Node + `npm i playwright`):
 python3 tools/preview_static.py /tmp/preview && node tools/browser/shoot.js && node tools/browser/interact.js && node tools/browser/theme.js
 for f in $(find app public tests bin tools config -name '*.php'); do php -l "$f"; done
@@ -99,6 +119,7 @@ app/Views/         PHP templates (layouts, partials, pages, auth, portal, admin)
 config/            resources.php (admin screens), .env.example lives in the project root
 database/          migrations/*.sql, seeds/content.sql (original site content)
 bin/migrate.php    CLI migrator
+bin/purge.php      retention clean-up (CLI)
 tests/, tools/     unit + integration tests, static checker, dev router
 ```
 

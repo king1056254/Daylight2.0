@@ -37,6 +37,11 @@ Header (sticky, 6 nav links, mobile menu, theme toggle, account button, CTA) · 
 | Original seed content | Implemented · structure checked with SQLite stand-in | MySQL load unverified |
 | One-time web setup (`/setup`) | Implemented · Static | for hosts without SSH; shows nothing without the token |
 | `/sitemap.xml` + `/robots.txt` | Implemented · Static | added; not in the original site; needs `APP_URL` |
+| Website chat assistant, FAQ mode (retrieval over site content, CSRF, rate limit, text-only rendering) | Implemented · Static · algorithm evaluated in a Python port (42/42 tuning questions, 0/24 off-topic answered) · widget **Tested in a browser** with a mocked endpoint (61 checks) | PHP endpoint not yet run |
+| Chat assistant, AI mode (Anthropic, server-side, grounded prompt, daily cap, fallback) | Implemented · Static · **Blocked** (no API key; never called) | off by default |
+| Privacy policy v2.0 and Terms of service v2.0 (17 and 22 numbered sections, tables, anchors) | Implemented · Static · layout tested in a browser | **legal review required** (LEGAL_REVIEW.md) |
+| Client FAQ: 42 questions, 8 categories, live search | Implemented · migration SQL structure-checked (SQLite) · search tested in a browser | |
+| Data retention tool (CLI + super-admin button) | Implemented · Static | matches the periods in the privacy policy (unit test written) |
 | Security hardening (CSRF, CSP, rate limits, no-store, role checks) | Implemented · Static (audit script) | see SECURITY_REVIEW.md |
 | Public CSS/JS (menu, theme toggle, accordion, forms) | Implemented · **Tested in a browser against sample data** (not against the PHP app) | 108 renders + 30 interaction checks |
 
@@ -54,3 +59,9 @@ Placeholder content (team, testimonials, case-study clients) · unverified home 
 
 ## Next task (for the next session)
 Follow `COMPUTER_SETUP_CHECKLIST.md` §2–3 first (`php -l`, unit tests, migrations, integration tests), fix what they find, then §4–5 (run the site, visual comparison).
+
+## Session 4 additions — what is still outstanding
+- Run `php -l`, `tests/unit.php` and `tests/integration.php` (they now also cover the assistant endpoint, legal pages, FAQ page and retention).
+- Legal: owner decisions and advocate review (`LEGAL_REVIEW.md`); confirm the facts the policy states.
+- Assistant: provide an API key only if AI mode is wanted (then test it live); decide whether to log chats.
+- Content: review the 37 new FAQ answers in Admin → FAQs; self-host the fonts (privacy).

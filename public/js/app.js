@@ -70,6 +70,26 @@
     if (msg && !window.confirm(msg)) e.preventDefault();
   }, true);
 
+  // FAQ search: hides questions that do not contain every word typed
+  var faqBox = document.querySelector('[data-faq-filter]');
+  if (faqBox) {
+    faqBox.addEventListener('input', function () {
+      var words = faqBox.value.toLowerCase().split(/\s+/).filter(Boolean);
+      var shown = 0;
+      document.querySelectorAll('[data-faq-item]').forEach(function (item) {
+        var text = item.textContent.toLowerCase();
+        var match = words.every(function (w) { return text.indexOf(w) !== -1; });
+        item.hidden = !match;
+        if (match) shown++;
+      });
+      document.querySelectorAll('[data-faq-group]').forEach(function (g) {
+        g.hidden = !g.querySelector('[data-faq-item]:not([hidden])');
+      });
+      var empty = document.querySelector('[data-faq-empty]');
+      if (empty) empty.hidden = shown > 0;
+    });
+  }
+
   // Locale dates (the original used toLocaleDateString)
   document.querySelectorAll('time[data-local-date]').forEach(function (el) {
     var d = new Date(el.getAttribute('datetime') + 'T00:00:00Z');

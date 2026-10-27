@@ -5,6 +5,7 @@
  */
 $slug = (string) $def['slug'];
 $isNew = $row === null;
+$hasEditable = count(array_filter($def['fields'], static fn (array $f): bool => empty($f['readonly']))) > 0;
 $action = $isNew ? '/admin/' . $slug : '/admin/' . $slug . '/' . $row['id'];
 ?>
 <p class="crumbs"><a href="<?= e(url('/admin/' . $slug)) ?>"><?= e($def['title']) ?></a> / <?= $isNew ? 'New' : 'Edit' ?></p>
@@ -62,7 +63,7 @@ $action = $isNew ? '/admin/' . $slug : '/admin/' . $slug . '/' . $row['id'];
   <?php endforeach; ?>
   </div>
   <div class="form-actions">
-    <?php if ($canWrite): ?><button type="submit" class="btn" data-busy-label="Saving…" data-label="Save">Save</button><?php endif; ?>
+    <?php if ($canWrite && $hasEditable): ?><button type="submit" class="btn" data-busy-label="Saving…" data-label="Save">Save</button><?php endif; ?>
     <a class="btn btn-outline" href="<?= e(url('/admin/' . $slug)) ?>">Back</a>
   </div>
 </form>

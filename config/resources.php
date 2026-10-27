@@ -52,6 +52,17 @@ return [
         ],
     ],
 
+    'assistant-chats' => [
+        'title' => 'Assistant chats', 'singular' => 'assistant message', 'group' => 'Inbox', 'visible' => 'admin', 'write' => 'admin',
+        'table' => 'assistant_messages', 'order' => 'created_at DESC', 'no_create' => true,
+        'list' => ['content', 'role', 'mode', 'matched', 'created_at'], 'search' => ['content', 'mode'],
+        'fields' => [
+            'role' => ['readonly' => true], 'content' => ['type' => 'textarea', 'readonly' => true], 'mode' => ['readonly' => true],
+            'matched' => ['type' => 'bool', 'label' => 'Answered from site content', 'readonly' => true],
+            'created_at' => ['type' => 'datetime', 'label' => 'Time', 'readonly' => true],
+        ],
+    ],
+
     // ---------------- Clients & delivery ----------------
     'clients' => [
         'title' => 'Clients', 'singular' => 'client', 'group' => 'Clients', 'visible' => 'staff', 'write' => 'staff',

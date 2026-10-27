@@ -51,6 +51,8 @@ function icon(string $name, int $size = 16, string $class = ''): string
         'x' => '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
         'moon' => '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
         'sun' => '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+        'message' => '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+        'send' => '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
         'chevron-down' => '<path d="m6 9 6 6 6-6"/>',
     ];
     $body = $paths[$name] ?? '';
@@ -103,4 +105,28 @@ function as_list(mixed $value): array
 function current_path(): string
 {
     return (string) ($GLOBALS['__daylight_path'] ?? '/');
+}
+
+/**
+ * Escapes legal/policy text and supports a tiny, safe inline syntax: **bold**, [label](/internal-path) and [label](https://external).
+ * {{key}} placeholders are replaced first (their values are escaped with everything else).
+ * @param array<string,string> $vars
+ */
+function legal_text(string $text, array $vars = []): string
+{
+    foreach ($vars as $key => $value) {
+        $text = str_replace('{{' . $key . '}}', $value, $text);
+    }
+    $html = e($text);
+    $html = (string) preg_replace('/\*\*(.+?)\*\*/', '<strong>$1</strong>', $html);
+    return (string) preg_replace_callback(
+        '/\[([^\]]+)\]\((\/[A-Za-z0-9_\-\/#.]*|https:\/\/[A-Za-z0-9._~\-\/#?=%:]+)\)/',
+        static function (array $m): string {
+            if ($m[2][0] === '/') {
+                return '<a href="' . e(url($m[2])) . '" class="legal-link">' . $m[1] . '</a>';
+            }
+            return '<a href="' . e($m[2]) . '" class="legal-link" target="_blank" rel="noopener noreferrer">' . $m[1] . '</a>';
+        },
+        $html
+    );
 }

@@ -50,3 +50,22 @@ A real attack against a running copy is still to be done (see "Still to do").
 3. Verify response headers, cookie flags and that `/.env`, `/app/`, `/storage/`, `/database/` are not reachable on the real host.
 4. Review `storage/logs` for secrets after testing; test SMTP failure paths.
 5. Have a person who did not write the code attempt privilege escalation with a client, staff and admin account.
+
+## Addendum — chat assistant, legal pages, FAQ search, retention (session 4)
+New attack surface: `POST /assistant/message` (JSON), the widget, optional calls to an AI provider, the FAQ search box, the retention button.
+
+| Risk | Defence | Evidence |
+|---|---|---|
+| CSRF / cross-site use of the endpoint | same CSRF token as the forms (`419` otherwise); same-origin `fetch`; no CORS headers | audit (19 POST routes); tests written |
+| Abuse and cost | 20 messages / 10 min / IP; 500-character questions; history capped at 6 turns × 800 characters; site-wide daily cap for AI replies; automatic fallback to the free FAQ mode | tests written |
+| XSS through replies | replies are drawn with `textContent`; only links that start with a single `/` become anchors; JSON is encoded with `JSON_HEX_*`; CSP forbids inline scripts | **browser-tested** (an `<img onerror>` + `<script>` reply stays inert; `javascript:` and `//evil` links are dropped) |
+| Prompt injection / data leakage | the AI sees only public site content and has no tools, no account data and no secrets; the system prompt tells it to ignore instructions to change the rules | by design; AI mode never tested live |
+| Wrong or harmful advice | disclosure in the widget, the FAQ, the terms and the privacy policy; prompt forbids legal/financial advice and invented prices or terms | untested live |
+| Privacy | FAQ mode sends nothing out; AI mode discloses the transfer; chat text is not stored unless `ASSISTANT_LOG_CHATS=true` (hashed session id, 90 days); the assistant cannot read account data | policy §6; tests written |
+| API key exposure | key only in the server environment; never in markup (test written); not logged | test written |
+| Outbound request abuse (SSRF) | the AI URL comes only from the owner's environment, must be HTTPS, redirects are not followed; no user-controlled URLs are fetched | code review |
+| Retention button | super admin only, CSRF, confirmation dialog | tests written |
+| Legal text rendering | content is escaped; only `**bold**`, internal links and `https://` links (with `rel="noopener noreferrer"`) are allowed | unit + browser tested |
+
+Found and fixed while testing (not security-critical): duplicate HTML id between the widget and the privacy page; confidence rule that let an off-topic question through on a single generic word; policy tables that needed sideways scrolling on phones.
+Residual: AI mode can still produce wrong text (it is advisory); the AI provider is a third party and a transfer outside Kenya; the assistant's matching is keyword-based and can miss or mis-match a question (it falls back politely when unsure).

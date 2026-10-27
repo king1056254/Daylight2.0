@@ -1,5 +1,5 @@
 <?php
-/** @var list<array{0:string,1:int,2:string}> $stats @var list<array<string,mixed>> $recentMessages @var list<array<string,mixed>> $recentQuotes @var int $failedEmails @var int $skippedEmails @var bool $demoAllowed @var bool $demoExists */
+/** @var list<array{0:string,1:int,2:string}> $stats @var list<array<string,mixed>> $recentMessages @var list<array<string,mixed>> $recentQuotes @var int $failedEmails @var int $skippedEmails @var bool $demoAllowed @var bool $demoExists @var array<string,array{label:string,count:int}>|null $retention */
 ?>
 <div class="app-title"><h1>Dashboard</h1></div>
 <div class="stat-grid">
@@ -41,6 +41,22 @@
     </div>
   </div>
 </div>
+
+<?php if ($retention !== null): $due = array_sum(array_column($retention, 'count')); ?>
+<div class="card mt-10">
+  <h2 class="title-lg font-display font-semibold">Data retention</h2>
+  <p class="body">Our privacy policy promises to delete personal data after a fixed time. <?= $due > 0 ? e((string) $due) . ' record(s) are now past their retention period.' : 'Nothing is past its retention period right now.' ?></p>
+  <?php if ($due > 0): ?>
+    <ul class="checklist checklist-tight mt-4">
+      <?php foreach ($retention as $r): if ($r['count'] > 0): ?><li><?= icon('check', 16) ?> <?= e((string) $r['count']) ?> — <?= e($r['label']) ?></li><?php endif; endforeach; ?>
+    </ul>
+    <form method="post" action="<?= e(url('/admin/retention')) ?>" class="mt-4" data-confirm="Permanently delete these old records? This cannot be undone.">
+      <?= csrf_field() ?>
+      <button type="submit" class="btn btn-outline">Delete records past their retention period</button>
+    </form>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
 
 <?php if ($demoAllowed): ?>
 <div class="card mt-10">
