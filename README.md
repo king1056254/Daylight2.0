@@ -134,3 +134,5 @@ Not yet implemented: file uploads (documents are links), two-factor sign-in, acc
 ## Known limitations
 
 See `FEATURE_CHECKLIST.md` and `MIGRATION_PLAN.md` (deviations from the original are listed there).
+#   D a y l i g h t 2 . 0  
+ 

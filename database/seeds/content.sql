@@ -2,7 +2,7 @@
 -- NOTE: team members, testimonials and portfolio clients are PLACEHOLDERS from the original source.
 -- Replace them with real data from the admin area. Import with utf8mb4 (phpMyAdmin: choose utf8mb4).
 INSERT INTO company_settings (id, company_name, tagline, description, email, phone, address, linkedin_url)
-VALUES (UUID(), 'Daylight','Software that runs the business','Daylight is a Kenyan software company building custom business software, web and mobile applications, and its own SaaS products.','daylightcompany13@gmail.co','+254 700 000 000','Nairobi, Kenya','https://linkedin.com');
+VALUES (UUID(), 'Daylight','Software that runs the business','Daylight is a Kenyan software company building custom business software, web and mobile applications, and its own SaaS products.','daylightcompany13@gmail.com','+254 700 000 000','Nairobi, Kenya','https://linkedin.com');
 
 INSERT INTO services (id, title, slug, summary, description, icon, features, sort_order) VALUES
 (UUID(), 'Custom Business Software','custom-business-software','Systems built around how your business actually works.','We design and build operational systems — inventory, POS, HR, school management, membership, logistics — tailored to your workflows instead of forcing you into someone else''s.','Boxes','["Requirements & process mapping","Custom database design","Role-based access","Reporting dashboards"]',1),

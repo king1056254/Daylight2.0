@@ -35,7 +35,7 @@ $router->get('/privacy', [PageController::class, 'privacy']);
 $router->get('/terms', [PageController::class, 'terms']);
 
 // ---- Website assistant (JSON) ----
-$router->post('/assistant/message', [AssistantController::class, 'message']);
+$router->post('/assistant/message', [AssistantController::class, 'handleMessage']);
 
 // ---- Search engines ----
 $router->get('/sitemap\.xml', [SeoController::class, 'sitemap']);

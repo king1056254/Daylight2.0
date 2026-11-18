@@ -1,12 +1,23 @@
 # TEST_REPORT.md
 
 ## Summary
-**No PHP code has been executed. No test of the PHP application has run. Nothing is Verified.**
-The build environment has no PHP and no MySQL. It does have a browser engine, so the stylesheet and the JavaScript *were* tested in Chromium against an approximate rendering of the real templates with sample data (rows 10–12). What follows is exactly what was run, and what was not.
+Local verification on 2026-11-18 resolved the homepage's HTTP 500. `AssistantController::message()` conflicted with the inherited `Controller::message()` signature when routes loaded; the endpoint handler was renamed. The unit test also exposed an invalid regex delimiter in the assistant's internal-link check, which was corrected.
 
-**Is everything OK, with no errors? Unknown — and unlikely.** Code that has never been executed almost certainly contains some mistakes. The checks below make the most common ones unlikely, but only `php -l` and the test suites on a real PHP server can show it.
+| Check | Result |
+|---|---|
+| `php -l` on changed PHP files | Passed |
+| `php tests/unit.php` | **35 passed, 0 failed** |
+| Apache `GET http://localhost/daylight-php/` | **200 OK**, homepage rendered using the local database |
+| Static assets under `/daylight-php` | CSS returned `text/css`; all three JavaScript files returned `text/javascript` |
+| Browser visual/theme check | CSS applied; light/dark theme backgrounds changed as expected; fresh reload had no console errors |
+| Private-file routing | `.env` and migration SQL remained blocked; app source returned 403 |
+| Migrations | Not rerun; expected tables and seeded content were already present |
+| MySQL integration suite | Not run; its runner drops all tables in its configured test database |
 
-## Checks that actually ran (all in the build environment)
+## Earlier checks (initial build environment)
+The initial build environment had no PHP or MySQL. It did have a browser engine, so the stylesheet and JavaScript were tested in Chromium against an approximate rendering of the templates with sample data (rows 10–12). The checks below record what ran there.
+
+## Checks that actually ran (initial build environment)
 | # | Check | Result | What it proves — and does not |
 |---|---|---|---|
 | 1 | `python3 tools/lint.py` — bracket balance, alternative-syntax balance in templates, duplicate methods, missing classes/views, calls to undefined static/`self::` methods, routes → controller methods, unknown helper functions in templates, admin hooks exist | 80 PHP files, 29 classes, **no problems** | Catches wiring mistakes. **Not** a PHP parser; will miss real syntax errors. |
@@ -29,17 +40,16 @@ The build environment has no PHP and no MySQL. It does have a browser engine, so
 | 18 | Id-collision scan (legal section ids vs template ids) | none after fixing a real bug found by reading the tests: the widget and the privacy page's `#assistant` section shared an id, which would have broken the widget on that page | |
 
 ## Tests written but NOT run
-- `tests/unit.php` — 34 tests (config parsing, validator, router, migration splitter, helpers, mailer header safety, CSRF, redirect safety, proxy-IP handling, admin resource definitions, **retriever, assistant intents, AI client payload/guard rails, legal-text escaping, legal documents vs retention rules, assistant knowledge, FAQ migration**).
-- `tests/integration.php` — 46 scenario tests + 18 generated page tests, driving the real router against a scratch MySQL database: public pages, 404s, unpublished content, forms (valid/invalid/CSRF/honeypot/rate-limit), auth (register/login/logout/reset/rate limit), authorisation (anonymous/client/staff/admin/super admin), XSS escaping, portal isolation between clients, invoice totals and payment settlement, demo-data load/remove, **sitemap.xml and robots.txt**, and **attack simulations** (bad CSRF on every POST route, SQL-injection strings, stored XSS, mass assignment, header injection, setup page without token, no-store headers, deactivated accounts, access-control sweep over every admin screen), the **assistant endpoint** (answers, honest not-found, validation, CSRF, rate limit, no markup reflected, opt-in logging, AI-mode fallback, widget placement and off-switch), **legal pages**, the **FAQ page** and the **retention tool**.
+- `tests/integration.php` — 46 scenario tests + 18 generated page tests, driving the real router against a scratch MySQL database: public pages, 404s, unpublished content, forms (valid/invalid/CSRF/honeypot/rate-limit), auth (register/login/logout/reset/rate limit), authorisation (anonymous/client/staff/admin/super admin), XSS escaping, portal isolation between clients, invoice totals and payment settlement, demo-data load/remove, **sitemap.xml and robots.txt**, and **attack simulations** (bad CSRF on every POST route, SQL-injection strings, stored XSS, mass assignment, header injection, setup page without token, no-store headers, deactivated accounts, access-control sweep over every admin screen), the **assistant endpoint** (answers, honest not-found, validation, CSRF, rate limit, no markup reflected, opt-in logging, AI-mode fallback, widget placement and off-switch), **legal pages**, the **FAQ page** and the **retention tool**. Not run in the current local verification because the configured integration runner drops all tables in its test database.
 While reading the tests back, wrong expectations were found and corrected by inspection (escaped apostrophes, MySQL JSON re-formatting). Others may remain.
 
 ## Not verified at all
-`php -l` of every file · unit and integration tests · MySQL migrations and seed load · routing and `.htaccess` rewrites · sessions · every form and page in a browser · console/network errors · responsive layout and visual match with the original (no screenshots) · SMTP and email delivery · password-reset email · InfinityFree specifics (PHP version, rewrites, outbound SMTP, client IP) · security headers in a real response · performance.
+`php -l` of every file · integration suite · clean MySQL migrations and seed load · all routes and `.htaccess` rewrites · sessions · every form and page in a browser · console/network errors · responsive layout and visual match with the original (no screenshots) · SMTP and email delivery · password-reset email · InfinityFree specifics (PHP version, rewrites, outbound SMTP, client IP) · performance.
 
 ## Known failures / blockers
 | Item | Detail |
 |---|---|
-| No PHP/MySQL in the build environment | Blocks every execution test. Next step: `COMPUTER_SETUP_CHECKLIST.md` §1–3. |
+| MySQL integration suite not run | Local PHP/MySQL are available, but integration tests require a dedicated scratch database because they drop its tables. |
 | SMTP credentials | None provided. Email is implemented, not tested. |
 | GitHub access | Could not clone; source read through the Lovable connector. |
 | Original screenshots | Needed for visual comparison at 375/768/1280 px. |

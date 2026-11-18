@@ -119,6 +119,11 @@ test('Router matches params, 404 and 405', function (): void {
     assertSame(404, $r->match('GET', '/services/a/b'), 'slug cannot contain slash');
 });
 
+test('application routes load without controller method conflicts', function (): void {
+    $router = require ROOT . '/app/routes.php';
+    assertTrue($router instanceof Router, 'routes return a router');
+});
+
 test('Router prefers fixed routes registered first', function (): void {
     $r = new Router();
     $r->get('/admin/users/new', fn () => 'new');
@@ -366,7 +371,7 @@ test('assistant knowledge entries are well-formed', function (): void {
         assertTrue(isset($i['id'], $i['title'], $i['text'], $i['url']), 'keys');
         assertTrue(!in_array($i['id'], $ids, true), 'unique id ' . $i['id']);
         $ids[] = $i['id'];
-        assertTrue(preg_match('#^/[A-Za-z0-9_\-/#.]*$#', $i['url']) === 1, 'internal url ' . $i['url']);
+        assertTrue(preg_match('~^/[A-Za-z0-9_\-/#.]*$~', $i['url']) === 1, 'internal url ' . $i['url']);
         assertTrue(preg_match('/\bKSh\b|\bKES\b|\d{2,} (days|weeks|months)/', $i['text']) === 0, 'no prices or timelines are hard-coded: ' . $i['id']);
     }
 });

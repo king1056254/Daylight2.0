@@ -29,7 +29,7 @@ Section numbers of statutes are deliberately **not** quoted, because they cannot
 Tick each one; if one is not true, change the document or change the practice.
 
 - [ ] The site is served over **HTTPS** (the policy says "encrypted connections (HTTPS)").
-- [ ] The contact email in Admin → Company settings is correct and **someone reads it** (the policy promises responses to data requests within the legal time and no later than 30 days). The seed value `daylightcompany13@gmail.co` looks like a typo.
+- [ ] The contact email in Admin → Company settings is correct and **someone reads it** (the policy promises responses to data requests within the legal time and no later than 30 days). The seed value `daylightcompany13@gmail.com` looks like a typo.
 - [ ] **Registration with the ODPC** has been done or you have confirmed you are exempt. The policy only says "where the law requires it, we maintain our registration".
 - [ ] **Company legal name and registered address**: the documents say "Daylight, Nairobi, Kenya" (from Company settings). Put the exact registered name (for example "Daylight Limited") in Admin → Company settings → Company name and consider adding the registered address to the contact sections.
 - [ ] **Processor agreements** exist with the hosting provider and the email provider (and with Anthropic if AI mode is on) that bind them to use data only on your instructions.

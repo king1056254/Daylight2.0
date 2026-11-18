@@ -6,13 +6,10 @@ Options -Indexes
   # Never serve private folders or dotfiles
   RewriteRule ^(app|config|database|storage|tests|tools|bin)(/|$) - [F,L]
   RewriteRule (^|/)\.(env|git|htaccess) - [F,L]
-  # Serve real files from public/
-  RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+  # Requests may arrive under a subfolder, so map them relative to this project
+  # instead of building a path from DOCUMENT_ROOT.
+  RewriteRule ^public/ - [L]
   RewriteRule ^(.*)$ public/$1 [L]
-  # Everything else goes to the front controller
-  RewriteCond %{REQUEST_URI} !^/public/
-  RewriteRule ^ public/index.php [L]
-  RewriteRule ^public/index\.php$ - [L]
 </IfModule>
 <FilesMatch "(^\.|\.(env|sql|md|log|bak|ini|lock|dist)$)">
   <IfModule mod_authz_core.c>

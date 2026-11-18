@@ -486,7 +486,7 @@ Point the web root at `public/` and remove the root `.htaccess`; keep the rest o
 - Legal documents are drafts requiring legal review; several statements must be true in operation (`LEGAL_REVIEW.md`).
 - Portal/admin: documents are links (no uploads); payments are recorded manually (no M-Pesa/card integration); one portal account per client record; no two-factor sign-in; sessions stay valid after a password reset; registration reveals whether an email exists.
 - The assistant: English-centric keyword retrieval (no semantic understanding); remembers only the last 6 turns; cannot see account data by design.
-- Content to confirm with the owner: placeholder team/testimonials/case-study clients, the home-page statistics (copied unverified), the company email `daylightcompany13@gmail.co` (possible typo), `favicon.ico` (binary, not copied), self-hosting fonts (privacy).
+- Content to confirm with the owner: placeholder team/testimonials/case-study clients, the home-page statistics (copied unverified), the company email `daylightcompany13@gmail.com` (possible typo), `favicon.ico` (binary, not copied), self-hosting fonts (privacy).
 
 ---
 

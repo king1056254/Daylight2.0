@@ -57,7 +57,7 @@ final class AssistantController extends Controller
         return $out;
     }
 
-    public static function message(Request $r): Response
+    public static function handleMessage(Request $r): Response
     {
         if (!Config::bool('ASSISTANT_ENABLED', true)) {
             return self::json(['error' => 'The assistant is switched off.'], 404);
@@ -97,7 +97,7 @@ final class AssistantController extends Controller
         }
         $links = [];
         foreach ($result['links'] as $l) {
-            if (preg_match('#^/[A-Za-z0-9_\-/#.]*$#', $l['url']) === 1) {
+            if (preg_match('~^/[A-Za-z0-9_\-/#.]*$~', $l['url']) === 1) {
                 $links[] = ['label' => $l['label'], 'url' => url($l['url'])];
             }
         }

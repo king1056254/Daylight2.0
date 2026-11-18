@@ -194,7 +194,7 @@ final class PageController extends Controller
     /** @param array<string,mixed> $state */
     public static function contact(Request $r, array $state = [], int $status = 200): Response
     {
-        $email = (string) (Content::settings()['email'] ?? 'daylightcompany13@gmail.co');
+        $email = (string) (Content::settings()['email'] ?? 'daylightcompany13@gmail.com');
         return self::page('pages/contact', [
             'email' => $email,
             'errors' => $state['errors'] ?? [], 'old' => $state['old'] ?? [],

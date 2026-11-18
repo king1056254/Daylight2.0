@@ -55,7 +55,7 @@ Dashboard; inbox (contact, quotes, applications: view + status); clients, client
 File uploads (documents are links) · payment gateway (M-Pesa/card) · two-factor sign-in · image display for cover/photo URLs (the original did not render them either) · server-side session invalidation after password reset.
 
 ## Open items for the owner
-Placeholder content (team, testimonials, case-study clients) · unverified home statistics · company email `daylightcompany13@gmail.co` (possible typo) · SMTP provider · owner confirmation of decision D1 (native PHP) · screenshots of the original at 375/768/1280 px.
+Placeholder content (team, testimonials, case-study clients) · unverified home statistics · company email `daylightcompany13@gmail.com` (possible typo) · SMTP provider · owner confirmation of decision D1 (native PHP) · screenshots of the original at 375/768/1280 px.
 
 ## Next task (for the next session)
 Follow `COMPUTER_SETUP_CHECKLIST.md` §2–3 first (`php -l`, unit tests, migrations, integration tests), fix what they find, then §4–5 (run the site, visual comparison).

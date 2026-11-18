@@ -7,7 +7,7 @@ $groups = [
     ['Resources', [['/industries', 'Industries'], ['/faq', 'FAQ'], ['/quote', 'Request a quote'], ['/privacy', 'Privacy policy']]],
 ];
 $settings = Content::settings();
-$email = (string) ($settings['email'] ?? 'daylightcompany13@gmail.co');
+$email = (string) ($settings['email'] ?? 'daylightcompany13@gmail.com');
 ?>
 <footer class="site-footer">
   <div class="footer-inner">

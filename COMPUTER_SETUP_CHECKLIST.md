@@ -80,7 +80,7 @@ Everything below needs a computer (or a cloud PHP environment). **Nothing here h
 ## 9. Content and business items to confirm with the owner
 - [ ] Replace placeholder data (team, testimonials, case-study clients) with real information.
 - [ ] Confirm the home-page statistics (40+ systems, 12 industries, 3 SaaS products, 98% retention) are true — copied from the original, unverified.
-- [ ] Confirm the company email: the original has `daylightcompany13@gmail.co` (possible typo for `.com`); change it in Admin → Company settings.
+- [ ] Confirm the company email: the original has `daylightcompany13@gmail.com` (possible typo for `.com`); change it in Admin → Company settings.
 - [ ] Have counsel review Privacy and Terms (copied unchanged from the original).
 
 ## Added during development
