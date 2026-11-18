@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Daylight — PHP / MySQL edition
 
 Rebuild of the Daylight website (originally TanStack Start + React + Supabase) as server-rendered PHP with MySQL/MariaDB.
@@ -136,3 +137,6 @@ Not yet implemented: file uploads (documents are links), two-factor sign-in, acc
 See `FEATURE_CHECKLIST.md` and `MIGRATION_PLAN.md` (deviations from the original are listed there).
 #   D a y l i g h t 2 . 0  
  
+=======
+# Daylight2.0
+>>>>>>> origin/main
